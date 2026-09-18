@@ -1,0 +1,23 @@
+# Interface Next.js. A saída standalone carrega só o necessário para servir.
+FROM node:22.22-bookworm-slim AS construcao
+WORKDIR /app
+COPY package.json package-lock.json tsconfig.base.json ./
+COPY packages/nucleo/package.json packages/nucleo/
+COPY apps/web/package.json apps/web/
+RUN npm ci --ignore-scripts
+COPY packages ./packages
+COPY apps/web ./apps/web
+COPY docs/contracts ./docs/contracts
+RUN npx tsc -b packages/nucleo && npx next build apps/web
+
+FROM node:22.22-bookworm-slim AS execucao
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=construcao /app/node_modules ./node_modules
+COPY --from=construcao /app/packages/nucleo/dist ./packages/nucleo/dist
+COPY --from=construcao /app/packages/nucleo/package.json ./packages/nucleo/
+COPY --from=construcao /app/apps/web ./apps/web
+USER node
+HEALTHCHECK --interval=15s --timeout=3s --start-period=30s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["npx", "next", "start", "apps/web", "-p", "3000"]

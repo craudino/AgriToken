@@ -1,13 +1,13 @@
 import { Pool, PoolClient } from 'pg';
-import { configBases } from './config';
+import { urlBase } from './config';
 
 // Um pool por base. O serviço que não precisa do cofre de PII não recebe o
 // pool do cofre — a separação começa aqui, não no controle de acesso.
 let pools: { ops?: Pool; pii?: Pool; audit?: Pool } = {};
 
-export const poolOps = (): Pool => (pools.ops ??= new Pool({ connectionString: configBases().ops, max: 8 }));
-export const poolPii = (): Pool => (pools.pii ??= new Pool({ connectionString: configBases().pii, max: 4 }));
-export const poolAudit = (): Pool => (pools.audit ??= new Pool({ connectionString: configBases().audit, max: 4 }));
+export const poolOps = (): Pool => (pools.ops ??= new Pool({ connectionString: urlBase('ops'), max: 8 }));
+export const poolPii = (): Pool => (pools.pii ??= new Pool({ connectionString: urlBase('pii'), max: 4 }));
+export const poolAudit = (): Pool => (pools.audit ??= new Pool({ connectionString: urlBase('audit'), max: 4 }));
 
 export const fecharPools = async (): Promise<void> => {
   await Promise.all(Object.values(pools).map((p) => p?.end()));

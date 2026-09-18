@@ -1,0 +1,10 @@
+# Migração como passo próprio, com credencial própria e ciclo de vida próprio.
+# Roda até o fim e sai; os serviços só sobem depois que ela sai com zero.
+FROM node:22.22-bookworm-slim
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts --omit=dev
+COPY infra/db ./infra/db
+COPY docs/contracts/db ./docs/contracts/db
+USER node
+CMD ["node", "infra/db/migrar.mjs"]

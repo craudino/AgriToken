@@ -1,0 +1,271 @@
+# Ambiente de teste. Três bases em instâncias separadas, quatro validadores
+# Besu com QBFT e os seis serviços.
+#
+# AVISO DE HONESTIDADE: este arquivo NÃO foi executado. O ambiente em que foi
+# escrito não tem daemon Docker. A estrutura segue o que o briefing pede e o
+# que os serviços consomem hoje, mas a primeira execução vai encontrar erro —
+# trate como ponto de partida verificável, não como configuração validada.
+# Ver infra/compose/README.md.
+
+name: cpr-digital
+
+x-servico-comum: &servico-comum
+  restart: unless-stopped
+  environment: &ambiente-comum
+    AMBIENTE: ${AMBIENTE:-homologacao}
+    CPR_SEGREDO_JWT: ${CPR_SEGREDO_JWT:?defina CPR_SEGREDO_JWT com 32+ caracteres}
+    CORS_ORIGENS: ${CORS_ORIGENS:?defina as origens aceitas}
+    URL_COMPLIANCE: http://compliance:3001
+    URL_ORACLE: http://oracle:3002
+    URL_CORE: http://core:3003
+    URL_EUDR: http://eudr:3004
+    URL_REGISTRADORA: http://registradora:3005
+    RPC_URL: http://besu-1:8545
+    CHAIN_ID: "1337"
+  depends_on:
+    migracao:
+      condition: service_completed_successfully
+
+services:
+  # --- bases: três instâncias, não três bancos na mesma (ADR-0002) ----------
+  bd-ops:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: cpr_ops
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${SENHA_BD_OPS:?}
+    volumes: ['dados-ops:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d cpr_ops']
+      interval: 10s
+      retries: 10
+    networks: [dados]
+
+  bd-pii:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: cpr_pii
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${SENHA_BD_PII:?}
+    volumes: ['dados-pii:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d cpr_pii']
+      interval: 10s
+      retries: 10
+    # Rede própria: só o compliance alcança o cofre. A separação da ADR-0002
+    # aqui é de rede, não só de credencial.
+    networks: [cofre]
+
+  bd-audit:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: cpr_audit
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${SENHA_BD_AUDIT:?}
+    volumes: ['dados-audit:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d cpr_audit']
+      interval: 10s
+      retries: 10
+    networks: [dados]
+
+  # --- migração: roda até o fim antes de qualquer serviço subir -------------
+  migracao:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.migracao
+    environment:
+      OPS_URL_MIGRACAO: postgres://postgres:${SENHA_BD_OPS}@bd-ops:5432/cpr_ops
+      PII_URL_MIGRACAO: postgres://postgres:${SENHA_BD_PII}@bd-pii:5432/cpr_pii
+      AUDIT_URL_MIGRACAO: postgres://postgres:${SENHA_BD_AUDIT}@bd-audit:5432/cpr_audit
+    depends_on:
+      bd-ops: { condition: service_healthy }
+      bd-pii: { condition: service_healthy }
+      bd-audit: { condition: service_healthy }
+    networks: [dados, cofre]
+    restart: on-failure
+
+  # --- cadeia: quatro validadores QBFT --------------------------------------
+  # A genesis e as chaves vêm de infra/compose/besu/rede, geradas por
+  # gerar-genesis.sh. Sem elas os nós não sobem — de propósito: chave de
+  # validador versionada no repositório é chave comprometida.
+  besu-1: &besu
+    image: hyperledger/besu:24.12.2
+    command: >
+      --genesis-file=/config/genesis.json
+      --data-path=/dados
+      --node-private-key-file=/config/chave
+      --rpc-http-enabled --rpc-http-host=0.0.0.0 --rpc-http-api=ETH,NET,WEB3,QBFT
+      --host-allowlist=*
+      --p2p-host=besu-1
+    volumes:
+      - ./besu/rede/validador-1:/config:ro
+      - dados-besu-1:/dados
+    networks: [cadeia]
+
+  besu-2:
+    <<: *besu
+    command: >
+      --genesis-file=/config/genesis.json
+      --data-path=/dados
+      --node-private-key-file=/config/chave
+      --rpc-http-enabled --rpc-http-host=0.0.0.0 --rpc-http-api=ETH,NET,WEB3,QBFT
+      --host-allowlist=*
+      --p2p-host=besu-2
+      --bootnodes=${BOOTNODE:?rode gerar-genesis.sh e exporte BOOTNODE}
+    volumes:
+      - ./besu/rede/validador-2:/config:ro
+      - dados-besu-2:/dados
+
+  besu-3:
+    <<: *besu
+    command: >
+      --genesis-file=/config/genesis.json
+      --data-path=/dados
+      --node-private-key-file=/config/chave
+      --rpc-http-enabled --rpc-http-host=0.0.0.0 --rpc-http-api=ETH,NET,WEB3,QBFT
+      --host-allowlist=*
+      --p2p-host=besu-3
+      --bootnodes=${BOOTNODE}
+    volumes:
+      - ./besu/rede/validador-3:/config:ro
+      - dados-besu-3:/dados
+
+  besu-4:
+    <<: *besu
+    command: >
+      --genesis-file=/config/genesis.json
+      --data-path=/dados
+      --node-private-key-file=/config/chave
+      --rpc-http-enabled --rpc-http-host=0.0.0.0 --rpc-http-api=ETH,NET,WEB3,QBFT
+      --host-allowlist=*
+      --p2p-host=besu-4
+      --bootnodes=${BOOTNODE}
+    volumes:
+      - ./besu/rede/validador-4:/config:ro
+      - dados-besu-4:/dados
+
+  # --- serviços -------------------------------------------------------------
+  compliance:
+    <<: *servico-comum
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.servico
+      args: { SERVICO: compliance, CAMINHO: services/compliance }
+    environment:
+      <<: *ambiente-comum
+      PORTA: "3001"
+      PORTA_COMPLIANCE: "3001"
+      OPS_URL: postgres://cpr_ops_app:${SENHA_APP_OPS:?}@bd-ops:5432/cpr_ops
+      PII_URL: postgres://cpr_pii_svc:${SENHA_APP_PII:?}@bd-pii:5432/cpr_pii
+      AUDIT_URL: postgres://cpr_audit_svc:${SENHA_APP_AUDIT:?}@bd-audit:5432/cpr_audit
+      CHAVE_INDICE_CEGO: ${CHAVE_INDICE_CEGO:?}
+      KMS_DIR: /kms
+    volumes: ['chaves-kms:/kms']
+    # Único serviço na rede do cofre.
+    networks: [dados, cofre, servicos, cadeia]
+
+  oracle:
+    <<: *servico-comum
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.servico
+      args: { SERVICO: oracle, CAMINHO: services/oracle }
+    environment:
+      <<: *ambiente-comum
+      PORTA: "3002"
+      PORTA_ORACLE: "3002"
+      OPS_URL: postgres://cpr_ops_app:${SENHA_APP_OPS}@bd-ops:5432/cpr_ops
+      # Sem PII_URL: este serviço não tem o que fazer no cofre, e não declarar
+      # a variável é mais forte que declarar e não usar.
+      AUDIT_URL: postgres://cpr_audit_svc:${SENHA_APP_AUDIT}@bd-audit:5432/cpr_audit
+      DIR_BRUTO: /bruto
+    volumes: ['payloads-brutos:/bruto']
+    networks: [dados, servicos]
+
+  core:
+    <<: *servico-comum
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.servico
+      args: { SERVICO: core, CAMINHO: services/core }
+    environment:
+      <<: *ambiente-comum
+      PORTA: "3003"
+      PORTA_CORE: "3003"
+      OPS_URL: postgres://cpr_ops_app:${SENHA_APP_OPS}@bd-ops:5432/cpr_ops
+      # Sem PII_URL: este serviço não tem o que fazer no cofre, e não declarar
+      # a variável é mais forte que declarar e não usar.
+      AUDIT_URL: postgres://cpr_audit_svc:${SENHA_APP_AUDIT}@bd-audit:5432/cpr_audit
+    networks: [dados, servicos, cadeia]
+
+  eudr:
+    <<: *servico-comum
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.servico
+      args: { SERVICO: eudr, CAMINHO: services/eudr }
+    environment:
+      <<: *ambiente-comum
+      PORTA: "3004"
+      PORTA_EUDR: "3004"
+      OPS_URL: postgres://cpr_ops_app:${SENHA_APP_OPS}@bd-ops:5432/cpr_ops
+      # Sem PII_URL: este serviço não tem o que fazer no cofre, e não declarar
+      # a variável é mais forte que declarar e não usar.
+      AUDIT_URL: postgres://cpr_audit_svc:${SENHA_APP_AUDIT}@bd-audit:5432/cpr_audit
+    networks: [dados, servicos]
+
+  # O simulador de registradora só existe no perfil de teste. Em ambiente com
+  # dado real ele não sobe, e as rotas /sim já respondem 404 por ambiente.
+  registradora:
+    <<: *servico-comum
+    profiles: [teste]
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.servico
+      args: { SERVICO: simulador-registradora, CAMINHO: infra/simulador-registradora }
+    environment:
+      <<: *ambiente-comum
+      AMBIENTE: desenvolvimento
+      PORTA: "3005"
+      PORTA_REGISTRADORA: "3005"
+      OPS_URL: postgres://cpr_ops_app:${SENHA_APP_OPS}@bd-ops:5432/cpr_ops
+      # Sem PII_URL: este serviço não tem o que fazer no cofre, e não declarar
+      # a variável é mais forte que declarar e não usar.
+      AUDIT_URL: postgres://cpr_audit_svc:${SENHA_APP_AUDIT}@bd-audit:5432/cpr_audit
+    networks: [dados, servicos]
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.web
+    environment:
+      AMBIENTE: ${AMBIENTE:-homologacao}
+      CPR_SEGREDO_JWT: ${CPR_SEGREDO_JWT}
+      URL_CORE: http://core:3003
+      URL_COMPLIANCE: http://compliance:3001
+      URL_ORACLE: http://oracle:3002
+      URL_EUDR: http://eudr:3004
+    ports: ['3000:3000']
+    depends_on: [core, compliance, oracle, eudr]
+    networks: [servicos]
+    restart: unless-stopped
+
+networks:
+  # Quatro redes em vez de uma: a topologia é parte do controle de acesso.
+  # Um serviço comprometido alcança apenas o que a rede dele alcança.
+  dados:
+  cofre:
+  servicos:
+  cadeia:
+
+volumes:
+  dados-ops:
+  dados-pii:
+  dados-audit:
+  dados-besu-1:
+  dados-besu-2:
+  dados-besu-3:
+  dados-besu-4:
+  chaves-kms:
+  payloads-brutos:

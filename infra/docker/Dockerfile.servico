@@ -1,0 +1,54 @@
+# Imagem dos serviços NestJS. Multi-estágio: o estágio de build tem o
+# ferramental TypeScript; o de execução, não.
+#
+# ARG SERVICO define qual workspace é construído — um Dockerfile para os cinco,
+# porque cinco arquivos quase idênticos divergem em três semanas.
+FROM node:22.22-bookworm-slim AS construcao
+WORKDIR /app
+
+# O lockfile entra antes do código: camada de dependências só é refeita quando
+# as dependências mudam.
+COPY package.json package-lock.json tsconfig.base.json ./
+COPY packages/nucleo/package.json packages/nucleo/
+COPY services/compliance/package.json services/compliance/
+COPY services/oracle/package.json services/oracle/
+COPY services/core/package.json services/core/
+COPY services/eudr/package.json services/eudr/
+COPY infra/simulador-registradora/package.json infra/simulador-registradora/
+COPY apps/web/package.json apps/web/
+RUN npm ci --ignore-scripts
+
+COPY packages ./packages
+COPY services ./services
+COPY infra/simulador-registradora ./infra/simulador-registradora
+COPY docs/contracts ./docs/contracts
+
+ARG SERVICO=core
+ARG CAMINHO=services/core
+RUN npx tsc -b packages/nucleo ${CAMINHO}
+
+FROM node:22.22-bookworm-slim AS execucao
+WORKDIR /app
+ENV NODE_ENV=production
+
+ARG SERVICO=core
+ARG CAMINHO=services/core
+ENV CAMINHO_SERVICO=${CAMINHO}
+
+COPY --from=construcao /app/node_modules ./node_modules
+COPY --from=construcao /app/packages/nucleo/dist ./packages/nucleo/dist
+COPY --from=construcao /app/packages/nucleo/package.json ./packages/nucleo/
+COPY --from=construcao /app/${CAMINHO}/dist ./${CAMINHO}/dist
+COPY --from=construcao /app/${CAMINHO}/package.json ./${CAMINHO}/
+# As ABIs são lidas em execução pelo cliente de cadeia.
+COPY --from=construcao /app/docs/contracts ./docs/contracts
+
+# Processo sem privilégio: o usuário node já existe na imagem base.
+USER node
+
+# O healthcheck bate em /saude, a única rota pública — de propósito, para que
+# o orquestrador não precise de credencial para saber se o processo vive.
+HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORTA||3000)+'/saude').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+CMD ["sh", "-c", "node ${CAMINHO_SERVICO}/dist/main.js"]

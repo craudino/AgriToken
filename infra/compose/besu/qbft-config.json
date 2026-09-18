@@ -1,0 +1,20 @@
+{
+  "comment": "Configuração de geração da rede QBFT. Quatro validadores é o mínimo que tolera uma falha bizantina: QBFT tolera f falhas com 3f+1 nós, e com quatro, f = 1. Perder dois validadores para a rede.",
+  "genesis": {
+    "config": {
+      "chainId": 1337,
+      "berlinBlock": 0,
+      "qbft": { "blockperiodseconds": 2, "epochlength": 30000, "requesttimeoutseconds": 4 }
+    },
+    "nonce": "0x0",
+    "timestamp": "0x0",
+    "gasLimit": "0x1fffffffffffff",
+    "difficulty": "0x1",
+    "mixHash": "0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365",
+    "coinbase": "0x0000000000000000000000000000000000000000",
+    "alloc": {}
+  },
+  "blockchain": {
+    "nodes": { "generate": true, "count": 4 }
+  }
+}

@@ -166,3 +166,16 @@ em sete frentes paralelas depois.
 - Compatibilidade: quebrante no tipo da coluna.
 - Princípios: coerência de risco (mandato de E4).
 - Decisão: **aceita**.
+
+## SMC-012 — Credencial de base exigida por quem a usa
+- Solicitante: orquestrador (surgiu ao escrever o compose)
+- Artefato: `packages/nucleo/src/config.ts`, `bd.ts`
+- Motivo: o núcleo obrigava todo serviço a declarar `PII_URL`, inclusive os que
+  não têm o que fazer no cofre. A saída fácil era apontar a variável para outro
+  banco só para o processo subir, o que transforma "não alcança o cofre" em
+  "alcança o cofre com o endereço errado". Agora cada base é exigida por quem a
+  usa, e quem tentar abrir o cofre sem credencial falha alto.
+- Impacto: A2, A3 e A4 deixam de declarar `PII_URL`.
+- Compatibilidade: aditiva no comportamento, restritiva na configuração.
+- Princípios: P2 e ADR-0002.
+- Decisão: **aceita**.
