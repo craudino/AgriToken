@@ -31,11 +31,13 @@ Verifique especificamente:
 4. **Seguro.** O fundo mutualizado não opera como seguro (competência SUSEP).
    Procure: prêmio, sinistro, indenização a terceiro beneficiário.
 5. **Prevalência do registro.** O espelhamento preserva a prevalência do
-   registro. Referência precisa: **art. 12 da Lei 8.929/1994, com redação dada
-   pela Lei 13.986/2020** — a CPR emitida a partir de 01/01/2021 deve ser
-   registrada ou depositada, em até 10 dias úteis, em entidade autorizada pelo
-   BCB, e o registro é condição de eficácia perante terceiros. Cite assim, e
-   não como "art. 12 da Lei 13.986/2020", que é impreciso.
+   registro. Referência precisa: **art. 12 da Lei 8.929/1994**, com redação
+   dada pela Lei 13.986/2020 e alterada pela **Lei 14.421/2022** — a CPR deve
+   ser registrada ou depositada em entidade autorizada pelo BCB, e o registro é
+   condição de eficácia perante terceiros. O prazo é de **30 dias úteis** para
+   CPR emitida a partir de 11/08/2022; eram 10 dias úteis para as emitidas até
+   10/08/2022. Cite assim, e não como "art. 12 da Lei 13.986/2020", que é
+   impreciso, nem com o prazo de 10 dias, que está superado.
 
 Onde olhar primeiro: `docs/contracts/openapi/registradora.yaml` (existe verbo
 de escrita?), `docs/contracts/abi/*.json` e `contracts/interfaces/*.sol`
