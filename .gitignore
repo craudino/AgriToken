@@ -12,3 +12,7 @@ artifacts/
 cache/
 broadcast/
 .next/
+
+# Massa sintética: determinística por semente, regerada por `node infra/dados/massa.mjs`.
+# Versionar dado gerado convida a editá-lo à mão, e aí a reprodutibilidade morre.
+infra/dados/massa.json
