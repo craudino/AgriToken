@@ -31,6 +31,18 @@ const logfile = (n) => join(RUN, `${n}.log`);
 
 const vivo = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 
+// npx e next start criam processos filhos: o pid do lançador pode morrer com o
+// serviço de pé, e o pidfile passa a mentir. A porta é a fonte de verdade sobre
+// o que está no ar.
+const portaViva = async (porta) => {
+  try {
+    const c = await fetch(`http://127.0.0.1:${porta}/`, { signal: AbortSignal.timeout(800) });
+    return c.status > 0;
+  } catch {
+    return false;
+  }
+};
+
 const pidDe = (n) => {
   if (!existsSync(pidfile(n))) return null;
   const pid = Number(readFileSync(pidfile(n), 'utf8').trim());
@@ -94,6 +106,8 @@ if (comando === 'subir') {
 } else {
   for (const s of [...SERVICOS, { nome: 'evm', porta: 8545 }]) {
     const pid = pidDe(s.nome);
-    console.log(`${s.nome.padEnd(14)} ${pid ? `pid ${pid}` : 'parado'}  porta ${s.porta}`);
+    const naPorta = await portaViva(s.porta);
+    const estado = pid ? `pid ${pid}` : naPorta ? 'de pé (pid perdido)' : 'parado';
+    console.log(`${s.nome.padEnd(14)} ${estado.padEnd(22)} porta ${s.porta} ${naPorta ? 'respondendo' : '-'}`);
   }
 }
