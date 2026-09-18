@@ -52,8 +52,12 @@ for dir in ops pii audit; do
 done
 $psql -d cpr_ops -f "$RAIZ/infra/db/referencia.sql" >/dev/null
 
+# DELETE é concedido APENAS no schema do simulador: uma registradora real pode
+# deixar de conhecer um título, e o sistema precisa enxergar essa ausência. No
+# schema de domínio não há DELETE — o histórico não se apaga (P5).
 $psql -d cpr_ops   -c "GRANT USAGE ON SCHEMA ops, sim TO cpr_ops_app;
                         GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA ops, sim TO cpr_ops_app;
+                        GRANT DELETE ON ALL TABLES IN SCHEMA sim TO cpr_ops_app;
                         GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA ops, sim TO cpr_ops_app;
                         GRANT USAGE ON SCHEMA geo TO cpr_ops_app;
                         GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA geo TO cpr_ops_app;" >/dev/null
