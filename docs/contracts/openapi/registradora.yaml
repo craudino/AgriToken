@@ -1,0 +1,163 @@
+# Interface da entidade registradora — contrato de fronteira externo.
+# O MVP consome esta interface contra um SIMULADOR (Briefing 6.2). A parte
+# /titulos é a interface que se espera da integração real; a parte /sim existe
+# apenas no simulador e não tem contrapartida em produção.
+openapi: 3.1.0
+info:
+  title: CPR Digital — Registradora (interface esperada + simulador)
+  version: 1.0.0
+  description: >
+    Fonte de verdade do sistema (P1). O núcleo lê daqui e nunca escreve:
+    não há, nesta especificação, nenhuma rota que altere um título a partir
+    do estado on-chain — a ausência é deliberada e é parte do contrato.
+servers:
+  - url: https://registradora.cpr.local/v1
+security:
+  - mtls: []
+paths:
+  /titulos/{entidade}/{registro_id}:
+    parameters:
+      - { name: entidade, in: path, required: true, schema: { type: string } }
+      - { name: registro_id, in: path, required: true, schema: { type: string } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+    get:
+      summary: Consulta o estado registrado do título
+      operationId: consultarTitulo
+      responses:
+        '200':
+          description: Estado do título conforme o registro
+          content: { application/json: { schema: { $ref: '#/components/schemas/Titulo' } } }
+        '404':
+          description: Título inexistente — divergência TITULO_INEXISTENTE_NO_REGISTRO
+          content: { application/problem+json: { schema: { $ref: 'comum.yaml#/components/schemas/Problema' } } }
+  /titulos:
+    get:
+      summary: Lista títulos alterados desde um marco (conciliação incremental)
+      operationId: listarAlteracoes
+      parameters:
+        - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+        - { name: desde, in: query, required: true, schema: { type: string, format: date-time } }
+        - $ref: 'comum.yaml#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Títulos alterados
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: 'comum.yaml#/components/schemas/Pagina'
+                  - type: object
+                    properties:
+                      itens: { type: array, items: { $ref: '#/components/schemas/Titulo' } }
+  /sim/injecoes:
+    post:
+      summary: '[SIMULADOR] Injeta uma divergência deliberada'
+      description: >
+        Existe apenas no simulador. O teste de aceite mais importante do MVP
+        injeta os doze tipos do catálogo e mede quantos o sistema detecta e em
+        quanto tempo. Uma injeção não detectada é reprovação, não observação.
+      operationId: injetarDivergencia
+      parameters:
+        - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tipo, entidade, registro_id]
+              properties:
+                tipo: { $ref: 'comum.yaml#/components/schemas/TipoDivergencia' }
+                entidade: { type: string }
+                registro_id: { type: string }
+                parametros: { type: object }
+      responses:
+        '201':
+          description: Divergência injetada
+          content: { application/json: { schema: { $ref: '#/components/schemas/Injecao' } } }
+  /sim/injecoes/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      summary: '[SIMULADOR] Placar de detecção de uma injeção'
+      operationId: obterInjecao
+      responses:
+        '200':
+          description: Injeção com resultado de detecção
+          content: { application/json: { schema: { $ref: '#/components/schemas/Injecao' } } }
+  /sim/indisponibilidade:
+    post:
+      summary: '[SIMULADOR] Simula queda ou lentidão da registradora'
+      description: Insumo do teste de degradação graciosa exigido por E8.
+      operationId: simularIndisponibilidade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [modo, duracao_s]
+              properties:
+                modo: { type: string, enum: [QUEDA, LENTIDAO, RESPOSTA_INCONSISTENTE, CERTIFICADO_INVALIDO] }
+                duracao_s: { type: integer }
+      responses:
+        '202': { description: Modo de falha ativado }
+components:
+  securitySchemes:
+    mtls: { $ref: 'comum.yaml#/components/securitySchemes/mtls' }
+  schemas:
+    Titulo:
+      type: object
+      required: [entidade, registro_id, estado, valor_face, quantidade, vencimento, conteudo_hash, atualizado_em]
+      description: >
+        Projeção normalizada do título registrado. O campo titular_ref é
+        pseudônimo: a identificação real da contraparte não trafega para a
+        plataforma por esta rota (P2).
+      properties:
+        entidade: { type: string }
+        registro_id: { type: string }
+        estado: { type: string, enum: [VIGENTE, BAIXADO, CANCELADO, PROTESTADO, BLOQUEADO_JUDICIALMENTE] }
+        titular_ref: { $ref: 'comum.yaml#/components/schemas/RefOpaca' }
+        emitente_ref: { $ref: 'comum.yaml#/components/schemas/RefOpaca' }
+        commodity: { $ref: 'comum.yaml#/components/schemas/Commodity' }
+        quantidade: { type: string }
+        valor_face: { $ref: 'comum.yaml#/components/schemas/Dinheiro' }
+        vencimento: { type: string, format: date }
+        garantias:
+          type: array
+          items:
+            type: object
+            properties:
+              tipo: { type: string }
+              referencia: { type: string }
+              valor: { $ref: 'comum.yaml#/components/schemas/Dinheiro' }
+        onus:
+          type: array
+          description: Gravames averbados. Ausência aqui e presença on-chain é divergência crítica.
+          items:
+            type: object
+            properties:
+              tipo: { type: string, enum: [PENHORA, ARRESTO, BLOQUEIO_JUDICIAL, CESSAO_FIDUCIARIA] }
+              averbado_em: { type: string, format: date }
+              referencia: { type: string }
+        cessoes:
+          type: array
+          items:
+            type: object
+            properties:
+              cessionario_ref: { $ref: 'comum.yaml#/components/schemas/RefOpaca' }
+              registrada_em: { type: string, format: date-time }
+        conteudo_hash: { $ref: 'comum.yaml#/components/schemas/Hash32' }
+        atualizado_em: { type: string, format: date-time }
+    Injecao:
+      type: object
+      required: [id, tipo, injetada_em]
+      properties:
+        id: { type: string, format: uuid }
+        tipo: { $ref: 'comum.yaml#/components/schemas/TipoDivergencia' }
+        entidade: { type: string }
+        registro_id: { type: string }
+        injetada_em: { type: string, format: date-time }
+        detectada_em: { type: [string, 'null'], format: date-time }
+        latencia_ms: { type: [integer, 'null'] }
+        divergencia_id: { type: [string, 'null'], format: uuid }

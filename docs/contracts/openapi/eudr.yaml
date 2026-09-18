@@ -1,0 +1,238 @@
+# services/eudr — A4. Polígonos, conformidade, evidência e DDS.
+# Artefato congelado da Fase 0.
+openapi: 3.1.0
+info:
+  title: CPR Digital — Motor EUDR e geoespacial
+  version: 1.0.0
+  description: >
+    Ingestão de polígono, validação topológica, cruzamento com bases de
+    desmatamento contra a data de corte, geração de evidência com hash e
+    emissão de declaração de due diligence.
+    P2 governa as saídas: nenhuma rota pública devolve geometria bruta —
+    devolve resultado, hash e, quando muito, centroide ofuscado. A geometria
+    sai apenas por rota autenticada de operador, com registro de tratamento.
+servers:
+  - url: https://eudr.cpr.local/v1
+security:
+  - bearerAuth: []
+    mtls: []
+paths:
+  /talhoes:
+    post:
+      summary: Ingere polígono de talhão
+      operationId: ingerirTalhao
+      parameters:
+        - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+        - $ref: 'comum.yaml#/components/parameters/ChaveIdempotencia'
+      requestBody:
+        required: true
+        content:
+          application/geo+json:
+            schema:
+              type: object
+              description: Feature GeoJSON (MultiPolygon, EPSG:4326) com propriedades mínimas.
+          application/vnd.google-earth.kml+xml:
+            schema: { type: string }
+      responses:
+        '201':
+          description: Talhão ingerido e validado topologicamente
+          content: { application/json: { schema: { $ref: '#/components/schemas/Talhao' } } }
+        '422':
+          description: Geometria inválida (autointerseção, área incoerente, projeção errada)
+          content: { application/problem+json: { schema: { $ref: 'comum.yaml#/components/schemas/Problema' } } }
+  /talhoes/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+    get:
+      summary: Metadados do talhão
+      description: Nunca devolve a geometria bruta (P2).
+      operationId: obterTalhao
+      responses:
+        '200':
+          description: Talhão
+          content: { application/json: { schema: { $ref: '#/components/schemas/Talhao' } } }
+  /talhoes/{id}/geometria:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+    get:
+      summary: Geometria bruta (operador autorizado)
+      description: >
+        Exige escopo geo:leitura e finalidade declarada. Cada chamada gera
+        registro de operação de tratamento em cpr_pii — acesso a geometria é
+        acesso a dado potencialmente reidentificante.
+      operationId: obterGeometria
+      parameters:
+        - { name: finalidade, in: query, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: GeoJSON
+          content: { application/geo+json: { schema: { type: object } } }
+        '403':
+          description: Escopo insuficiente
+          content: { application/problem+json: { schema: { $ref: 'comum.yaml#/components/schemas/Problema' } } }
+  /talhoes/{id}/avaliacoes:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+      - $ref: 'comum.yaml#/components/parameters/ChaveIdempotencia'
+    post:
+      summary: Avalia conformidade contra as bases de desmatamento
+      description: >
+        Exige leitura GEOESPACIAL com quórum de duas bases independentes (P4).
+        Resultado LIMITROFE quando a sobreposição cabe na margem de erro da
+        base — um falso "conforme" aqui contamina o colateral inteiro.
+      operationId: avaliarTalhao
+      responses:
+        '201':
+          description: Evidência gerada
+          content: { application/json: { schema: { $ref: '#/components/schemas/Evidencia' } } }
+        '503': { $ref: 'comum.yaml#/components/responses/SemQuorum' }
+  /evidencias/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+    get:
+      summary: Evidência de conformidade
+      description: Contrato de fronteira com A2 (selo do colateral) e A6 (painel do comprador).
+      operationId: obterEvidencia
+      responses:
+        '200':
+          description: Evidência
+          content: { application/json: { schema: { $ref: '#/components/schemas/Evidencia' } } }
+  /evidencias/{id}/reproducao:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+    post:
+      summary: Reexecuta a avaliação com os insumos originais
+      description: >
+        P6 em forma de rota: reprocessa a mesma versão de polígono contra a
+        mesma versão de base e compara o hash. Divergência significa que a
+        evidência não é reproduzível — achado crítico, não curiosidade.
+      operationId: reproduzirEvidencia
+      responses:
+        '200':
+          description: Resultado da reprodução
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reproduzivel, hash_original, hash_reproduzido]
+                properties:
+                  reproduzivel: { type: boolean }
+                  hash_original: { $ref: 'comum.yaml#/components/schemas/Hash32' }
+                  hash_reproduzido: { $ref: 'comum.yaml#/components/schemas/Hash32' }
+                  divergencias: { type: array, items: { type: string } }
+  /dds:
+    post:
+      summary: Emite declaração de due diligence
+      operationId: emitirDds
+      parameters:
+        - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+        - $ref: 'comum.yaml#/components/parameters/ChaveIdempotencia'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contrato_id, evidencias, operador_ref]
+              properties:
+                contrato_id: { type: string, format: uuid }
+                evidencias: { type: array, minItems: 1, items: { type: string, format: uuid } }
+                operador_ref: { $ref: 'comum.yaml#/components/schemas/RefOpaca' }
+      responses:
+        '201':
+          description: DDS emitida
+          content: { application/json: { schema: { $ref: '#/components/schemas/Dds' } } }
+        '409':
+          description: Evidência não conforme, vencida ou de polígono desatualizado
+          content: { application/problem+json: { schema: { $ref: 'comum.yaml#/components/schemas/Problema' } } }
+  /bases:
+    get:
+      summary: Bases de referência e suas versões
+      operationId: listarBases
+      parameters:
+        - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+      responses:
+        '200':
+          description: Bases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [codigo, versao, data_corte, hash_dataset]
+                  properties:
+                    codigo: { type: string }
+                    versao: { type: string }
+                    data_corte: { type: string, format: date }
+                    publicada_em: { type: string, format: date }
+                    hash_dataset: { $ref: 'comum.yaml#/components/schemas/Hash32' }
+components:
+  securitySchemes:
+    bearerAuth: { $ref: 'comum.yaml#/components/securitySchemes/bearerAuth' }
+    mtls: { $ref: 'comum.yaml#/components/securitySchemes/mtls' }
+  schemas:
+    Talhao:
+      type: object
+      required: [id, produtor_ref, area_declarada_ha, commodity, poligono_hash, poligono_versao]
+      properties:
+        id: { type: string, format: uuid }
+        produtor_ref: { $ref: 'comum.yaml#/components/schemas/RefOpaca' }
+        apelido: { type: [string, 'null'] }
+        area_declarada_ha: { type: number }
+        area_calculada_ha: { type: [number, 'null'] }
+        commodity: { $ref: 'comum.yaml#/components/schemas/Commodity' }
+        poligono_hash: { $ref: 'comum.yaml#/components/schemas/Hash32' }
+        poligono_versao: { type: integer }
+        municipio_ibge: { type: string }
+        centroide_ofuscado:
+          type: object
+          description: Ponto com ruído de no mínimo 5 km, para exibição a terceiros.
+          properties:
+            lat: { type: number }
+            lon: { type: number }
+            raio_ruido_m: { type: integer, minimum: 5000 }
+        topologia_valida: { type: boolean }
+    Evidencia:
+      type: object
+      required: [id, talhao_id, resultado, hash_evidencia, gerada_em, valida_ate, bases]
+      properties:
+        id: { type: string, format: uuid }
+        talhao_id: { type: string, format: uuid }
+        poligono_hash: { $ref: 'comum.yaml#/components/schemas/Hash32' }
+        poligono_versao: { type: integer }
+        resultado: { $ref: 'comum.yaml#/components/schemas/ResultadoEudr' }
+        area_sobreposta_ha: { type: number }
+        margem_erro_m: { type: integer }
+        bases:
+          type: array
+          items:
+            type: object
+            required: [codigo, versao, resultado]
+            properties:
+              codigo: { type: string }
+              versao: { type: string }
+              resultado: { $ref: 'comum.yaml#/components/schemas/ResultadoEudr' }
+              area_sobreposta_ha: { type: number }
+        leitura_id: { type: [string, 'null'], format: uuid }
+        hash_evidencia: { $ref: 'comum.yaml#/components/schemas/Hash32' }
+        evidencia_uri: { type: string, format: uri }
+        gerada_em: { type: string, format: date-time }
+        valida_ate: { type: string, format: date-time }
+    Dds:
+      type: object
+      required: [id, numero, estado, hash_dds]
+      properties:
+        id: { type: string, format: uuid }
+        numero: { type: string }
+        estado: { type: string, enum: [RASCUNHO, EMITIDA, SUBSTITUIDA, REVOGADA] }
+        contrato_id: { type: string, format: uuid }
+        evidencias: { type: array, items: { type: string, format: uuid } }
+        hash_dds: { $ref: 'comum.yaml#/components/schemas/Hash32' }
+        dds_uri: { type: string, format: uri }
+        emitida_em: { type: [string, 'null'], format: date-time }

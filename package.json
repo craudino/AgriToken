@@ -1,0 +1,21 @@
+{
+  "name": "cpr-digital",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MVP CPR Digital — raiz do monorepo. Ferramental de validação dos contratos congelados da Fase 0.",
+  "type": "module",
+  "scripts": {
+    "validar:openapi": "redocly lint --config infra/ci/redocly.yaml && node infra/ci/validar-openapi.mjs",
+    "validar:eventos": "node infra/ci/validar-eventos.mjs",
+    "validar:esquema": "bash infra/ci/validar-esquema.sh",
+    "validar:contratos": "node infra/ci/validar-abis.mjs",
+    "validar": "npm run validar:openapi && npm run validar:eventos && npm run validar:contratos && npm run validar:esquema"
+  },
+  "devDependencies": {
+    "@redocly/cli": "^1.25.11",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "solc": "0.8.28",
+    "yaml": "^2.6.1"
+  }
+}

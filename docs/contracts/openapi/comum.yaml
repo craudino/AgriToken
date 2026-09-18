@@ -1,0 +1,173 @@
+# Componentes compartilhados entre todos os serviços.
+# Artefato congelado da Fase 0. Alteração exige solicitação de mudança de
+# contrato ao orquestrador (ver CLAUDE.md).
+openapi: 3.1.0
+info:
+  title: CPR Digital — componentes comuns
+  version: 1.0.0
+  description: >
+    Tipos, erros e cabeçalhos compartilhados. Nenhum esquema deste arquivo
+    admite campo com dado pessoal diretamente identificável (P2): quando a
+    identidade é necessária, trafega a referência opaca e a resolução ocorre
+    em services/compliance, com registro da operação de tratamento.
+paths: {}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token OIDC do usuário ou do serviço chamador.
+    mtls:
+      type: mutualTLS
+      description: Obrigatório em toda chamada serviço-a-serviço.
+
+  parameters:
+    CorrelacaoId:
+      name: X-Correlacao-Id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+      description: Propagado por toda a cadeia; é a chave da trilha de auditoria.
+    ChaveIdempotencia:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, minLength: 16, maxLength: 128 }
+      description: >
+        Obrigatório em toda operação que cria efeito irreversível (emissão,
+        liquidação, emissão de DDS). Repetição com a mesma chave devolve o
+        mesmo resultado, nunca um segundo efeito (P3).
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Limite:
+      name: limite
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+
+  headers:
+    X-Correlacao-Id:
+      schema: { type: string, format: uuid }
+    X-Conciliacao-Situacao:
+      description: >
+        Situação de conciliação do contrato no instante da resposta. Presente
+        em toda resposta que carrega estado de contrato, para que nenhum
+        consumidor possa alegar desconhecimento de divergência aberta (P1).
+      schema: { $ref: '#/components/schemas/SituacaoConciliacao' }
+
+  schemas:
+    RefOpaca:
+      type: string
+      pattern: '^[0-9a-f]{32}$'
+      description: Pseudônimo aleatório de 128 bits em hexadecimal. Nunca derivado de PII.
+    Hash32:
+      type: string
+      pattern: '^0x[0-9a-f]{64}$'
+    Dinheiro:
+      type: object
+      required: [valor, moeda]
+      properties:
+        valor: { type: string, pattern: '^-?[0-9]+\.[0-9]{2}$', description: Decimal exato em texto; nunca ponto flutuante. }
+        moeda: { type: string, enum: [BRL] }
+    EstadoContrato:
+      type: string
+      enum: [RASCUNHO, EM_VERIFICACAO, REGISTRADO, ESPELHADO, ATIVO, EM_DISPUTA, INADIMPLENTE, LIQUIDADO, EXECUTADO]
+    SituacaoConciliacao:
+      type: string
+      enum: [NAO_APLICAVEL, PENDENTE, CONCILIADO, DIVERGENTE, CONGELADO]
+    TipoDivergencia:
+      type: string
+      enum:
+        - TITULO_BAIXADO_NO_REGISTRO
+        - CESSAO_NAO_REFLETIDA
+        - VALOR_FACE_ALTERADO
+        - QUANTIDADE_ALTERADA
+        - VENCIMENTO_ALTERADO
+        - GARANTIA_ALTERADA
+        - ONUS_OU_GRAVAME_NAO_REFLETIDO
+        - TITULO_INEXISTENTE_NO_REGISTRO
+        - TOKEN_AUSENTE_PARA_REGISTRO
+        - DUPLICIDADE_DE_ANCORA
+        - ESTADO_DIVERGENTE
+        - HASH_DOCUMENTAL_DIVERGENTE
+    Severidade:
+      type: string
+      enum: [INFORMATIVA, BAIXA, MEDIA, ALTA, CRITICA]
+    ResultadoEudr:
+      type: string
+      enum: [CONFORME, NAO_CONFORME, LIMITROFE, INCONCLUSIVO]
+    EstadoLeitura:
+      type: string
+      enum: [COLETANDO, EFETIVA, DEGRADADA, SEM_QUORUM, EM_DISPUTA, INVALIDADA]
+    Commodity:
+      type: string
+      enum: [CAFE_ARABICA, CAFE_CONILON]
+
+    Evidencia:
+      type: object
+      description: Ponteiro verificável para o insumo que sustenta uma afirmação (P5).
+      required: [tipo, hash]
+      properties:
+        tipo: { type: string, enum: [LEITURA_ORACULO, EVIDENCIA_EUDR, SNAPSHOT_REGISTRO, SNAPSHOT_ONCHAIN, TRANSACAO, DOCUMENTO, CREDENCIAL] }
+        id: { type: string, format: uuid }
+        hash: { $ref: '#/components/schemas/Hash32' }
+        uri: { type: string, format: uri, description: Objeto no armazenamento append-only. }
+        obtido_em: { type: string, format: date-time }
+
+    Pagina:
+      type: object
+      required: [itens]
+      properties:
+        itens: { type: array, items: {} }
+        proximo_cursor: { type: [string, 'null'] }
+
+    Problema:
+      description: RFC 9457. Nenhum campo de erro repete dado pessoal recebido.
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        correlacao_id: { type: string, format: uuid }
+        principio_violado:
+          type: string
+          enum: [P1, P2, P3, P4, P5, P6, P7]
+          description: >
+            Presente quando a recusa decorre de um princípio arquitetural.
+            Torna a fronteira visível ao consumidor e ao auditor.
+
+  responses:
+    Problema:
+      description: Erro
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problema' }
+    Congelado:
+      description: >
+        Contrato congelado por divergência de conciliação. Nenhuma operação de
+        estado é aceita até reconciliação humana (P1).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problema' }
+          example:
+            type: 'https://cpr.digital/erros/contrato-congelado'
+            title: Contrato congelado por divergência de conciliação
+            status: 409
+            principio_violado: P1
+    SemQuorum:
+      description: >
+        Dado externo indisponível ou sem quórum. A operação não é executada com
+        fonte única (P4); o sistema degrada e sinaliza, não adivinha.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problema' }
+          example:
+            type: 'https://cpr.digital/erros/sem-quorum'
+            title: Quórum de oráculo não atingido
+            status: 503
+            principio_violado: P4

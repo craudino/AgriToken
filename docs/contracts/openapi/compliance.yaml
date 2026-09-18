@@ -1,0 +1,253 @@
+# services/compliance — A5. KYC/KYB/AML, LGPD, DID/VC, cofre de PII.
+# É o ÚNICO serviço com rota de rede até cpr_pii. Artefato congelado da Fase 0.
+openapi: 3.1.0
+info:
+  title: CPR Digital — Compliance e privacidade
+  version: 1.0.0
+  description: >
+    Fronteira de contenção do dado pessoal. Dado identificável entra por aqui,
+    é cifrado com chave própria do titular e sai apenas como referência opaca,
+    credencial verificável ou atestação booleana. Nenhum outro serviço recebe
+    texto claro, e todo acesso a texto claro gera registro de tratamento.
+servers:
+  - url: https://compliance.cpr.local/v1
+security:
+  - bearerAuth: []
+    mtls: []
+paths:
+  /onboarding:
+    post:
+      summary: Inicia onboarding de produtor (F1)
+      description: >
+        Única rota do sistema que aceita dado identificável. A resposta devolve
+        a referência opaca que o restante da plataforma usará daqui em diante.
+      operationId: iniciarOnboarding
+      parameters:
+        - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+        - $ref: 'comum.yaml#/components/parameters/ChaveIdempotencia'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tipo_pessoa, documento, nome, base_legal]
+              properties:
+                tipo_pessoa: { type: string, enum: [PF, PJ] }
+                documento: { type: string, description: 'CPF ou CNPJ. Cifrado na recepção; nunca persistido em claro, nunca registrado em log.' }
+                nome: { type: string }
+                nascimento: { type: string, format: date }
+                contato: { type: string }
+                car_numero: { type: string, description: 'Número do CAR; tratado como identificante.' }
+                base_legal: { type: string, enum: [CONTRATO, OBRIGACAO_LEGAL, CONSENTIMENTO, LEGITIMO_INTERESSE] }
+      responses:
+        '202':
+          description: Onboarding aceito; verificação em andamento
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [produtor_ref, situacao]
+                properties:
+                  produtor_ref: { $ref: 'comum.yaml#/components/schemas/RefOpaca' }
+                  situacao: { $ref: '#/components/schemas/SituacaoKyc' }
+  /produtores/{ref}/situacao:
+    parameters:
+      - { name: ref, in: path, required: true, schema: { $ref: 'comum.yaml#/components/schemas/RefOpaca' } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+    get:
+      summary: Situação de habilitação do produtor
+      description: >
+        Contrato de fronteira com A2 e A6. Devolve atestações, nunca os dados
+        que as sustentam: "KYC aprovado, válido até", não "CPF fulano, listas X".
+      operationId: obterSituacao
+      responses:
+        '200':
+          description: Situação
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [produtor_ref, situacao, habilitado_a_originar]
+                properties:
+                  produtor_ref: { $ref: 'comum.yaml#/components/schemas/RefOpaca' }
+                  situacao: { $ref: '#/components/schemas/SituacaoKyc' }
+                  valido_ate: { type: [string, 'null'], format: date }
+                  habilitado_a_originar: { type: boolean }
+                  restricoes:
+                    type: array
+                    description: Motivos de impedimento, em forma categórica.
+                    items: { type: string, enum: [LISTA_RESTRITIVA, PEP_SEM_APROVACAO, EMBARGO_AMBIENTAL, TRABALHO_ANALOGO_ESCRAVO, CAR_INVALIDO, KYC_EXPIRADO] }
+                  porte: { type: string, enum: [PEQUENO, MEDIO, GRANDE] }
+                  uf: { type: string }
+                  municipio_ibge: { type: string }
+  /produtores/{ref}/credenciais:
+    parameters:
+      - { name: ref, in: path, required: true, schema: { $ref: 'comum.yaml#/components/schemas/RefOpaca' } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+    get:
+      summary: Credenciais verificáveis do titular
+      operationId: listarCredenciais
+      responses:
+        '200':
+          description: Credenciais (metadados; a VC completa vai ao titular, não a terceiros)
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/CredencialResumo' } }
+    post:
+      summary: Emite credencial verificável
+      operationId: emitirCredencial
+      parameters:
+        - $ref: 'comum.yaml#/components/parameters/ChaveIdempotencia'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tipo]
+              properties:
+                tipo: { type: string, enum: [KycAprovado, ProdutorRural, CarValido, EudrConforme] }
+                expira_em: { type: string, format: date-time }
+      responses:
+        '201':
+          description: Credencial emitida
+          content: { application/json: { schema: { $ref: '#/components/schemas/CredencialResumo' } } }
+  /verificacoes/credencial:
+    post:
+      summary: Verifica uma credencial apresentada
+      description: Verificação sem contato com o cofre de PII — só prova criptográfica e lista de status.
+      operationId: verificarCredencial
+      parameters:
+        - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vc]
+              properties:
+                vc: { type: object, description: Verifiable Credential no formato W3C. }
+      responses:
+        '200':
+          description: Resultado da verificação
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [valida, revogada, expirada]
+                properties:
+                  valida: { type: boolean }
+                  revogada: { type: boolean }
+                  expirada: { type: boolean }
+                  emissor: { type: string }
+  /titulares/{ref}/eliminacao:
+    parameters:
+      - { name: ref, in: path, required: true, schema: { $ref: 'comum.yaml#/components/schemas/RefOpaca' } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+      - $ref: 'comum.yaml#/components/parameters/ChaveIdempotencia'
+    post:
+      summary: Executa pedido de eliminação do titular (LGPD)
+      description: >
+        Destrói a chave do titular no KMS (crypto-shredding). Os registros sob
+        obrigação legal de retenção permanecem, pseudonimizados, e o que ficou
+        é declarado na resposta — a eliminação honesta diz o que não eliminou.
+      operationId: eliminarTitular
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [canal, solicitante]
+              properties:
+                canal: { type: string }
+                solicitante: { type: string }
+      responses:
+        '200':
+          description: Eliminação executada
+          content: { application/json: { schema: { $ref: '#/components/schemas/ResultadoEliminacao' } } }
+        '409':
+          description: Há retenção obrigatória que impede a eliminação total; executada eliminação parcial
+          content: { application/json: { schema: { $ref: '#/components/schemas/ResultadoEliminacao' } } }
+    get:
+      summary: Comprovante de irreversibilidade
+      description: >
+        Tenta decifrar um campo cifrado do titular eliminado e devolve a falha
+        como prova. É a evidência que a Seção 12 do briefing exige.
+      operationId: comprovarEliminacao
+      responses:
+        '200':
+          description: Comprovante
+          content: { application/json: { schema: { $ref: '#/components/schemas/ResultadoEliminacao' } } }
+  /tratamentos:
+    get:
+      summary: Registro de operações de tratamento
+      description: Contrato de fronteira com A6 (painel de auditoria) e com o regulador.
+      operationId: listarTratamentos
+      parameters:
+        - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+        - { name: produtor_ref, in: query, schema: { $ref: 'comum.yaml#/components/schemas/RefOpaca' } }
+        - { name: desde, in: query, schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: Operações
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [operacao, finalidade, base_legal, solicitante, ocorrido_em]
+                  properties:
+                    operacao: { type: string, enum: [COLETA, ACESSO, USO, COMPARTILHAMENTO, ELIMINACAO] }
+                    finalidade: { type: string }
+                    base_legal: { type: string }
+                    campos: { type: array, items: { type: string } }
+                    destinatario: { type: [string, 'null'] }
+                    solicitante: { type: string }
+                    ocorrido_em: { type: string, format: date-time }
+components:
+  securitySchemes:
+    bearerAuth: { $ref: 'comum.yaml#/components/securitySchemes/bearerAuth' }
+    mtls: { $ref: 'comum.yaml#/components/securitySchemes/mtls' }
+  schemas:
+    SituacaoKyc:
+      type: string
+      enum: [NAO_INICIADO, EM_ANALISE, APROVADO, REPROVADO, EXPIRADO, ELIMINADO]
+    CredencialResumo:
+      type: object
+      required: [id, tipo, emitida_em, expira_em, revogada]
+      properties:
+        id: { type: string, format: uuid }
+        tipo: { type: string }
+        did_emissor: { type: string }
+        did_sujeito: { type: string }
+        vc_hash: { $ref: 'comum.yaml#/components/schemas/Hash32' }
+        emitida_em: { type: string, format: date-time }
+        expira_em: { type: string, format: date-time }
+        revogada: { type: boolean }
+    ResultadoEliminacao:
+      type: object
+      required: [titular_ref, estado, chave_destruida_em, retencao_obrigatoria]
+      properties:
+        titular_ref: { $ref: 'comum.yaml#/components/schemas/RefOpaca' }
+        estado: { type: string, enum: [RECEBIDO, EM_ANALISE, PARCIAL, CONCLUIDO, RECUSADO] }
+        chave_destruida_em: { type: [string, 'null'], format: date-time }
+        comprovante_kms: { type: [string, 'null'] }
+        verificacao_irreversibilidade:
+          type: object
+          properties:
+            tentativa_decifragem: { type: string, enum: [FALHOU_COMO_ESPERADO, SUCESSO_INESPERADO] }
+            verificada_em: { type: string, format: date-time }
+        retencao_obrigatoria:
+          type: array
+          description: O que permanece e sob que fundamento legal.
+          items:
+            type: object
+            required: [categoria, fundamento, ate]
+            properties:
+              categoria: { type: string }
+              fundamento: { type: string }
+              ate: { type: string, format: date }

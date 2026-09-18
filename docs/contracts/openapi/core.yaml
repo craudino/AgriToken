@@ -1,0 +1,442 @@
+# services/core — A2. Domínio, originação, máquina de estados, conciliação,
+# liquidação e simulação de waterfall. É o único serviço que escreve em
+# ops.contrato. Artefato congelado da Fase 0.
+openapi: 3.1.0
+info:
+  title: CPR Digital — Núcleo de domínio
+  version: 1.0.0
+  description: >
+    P1 governa este serviço: o registro na entidade autorizada é a fonte de
+    verdade, e não existe operação que escreva no registro a partir do estado
+    on-chain. Toda rota que altera estado exige Idempotency-Key e produz
+    evento na trilha de auditoria.
+servers:
+  - url: https://core.cpr.local/v1
+security:
+  - bearerAuth: []
+    mtls: []
+tags:
+  - name: contratos
+  - name: conciliacao
+    description: Lacuna informacional nº 1 — a razão de ser do MVP.
+  - name: garantias
+  - name: liquidacao
+  - name: auditoria
+paths:
+  /contratos:
+    get:
+      tags: [contratos]
+      summary: Lista contratos espelhados
+      operationId: listarContratos
+      parameters:
+        - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+        - $ref: 'comum.yaml#/components/parameters/Cursor'
+        - $ref: 'comum.yaml#/components/parameters/Limite'
+        - { name: estado, in: query, schema: { $ref: 'comum.yaml#/components/schemas/EstadoContrato' } }
+        - { name: situacao_conciliacao, in: query, schema: { $ref: 'comum.yaml#/components/schemas/SituacaoConciliacao' } }
+        - { name: produtor_ref, in: query, schema: { $ref: 'comum.yaml#/components/schemas/RefOpaca' } }
+      responses:
+        '200':
+          description: Página de contratos
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: 'comum.yaml#/components/schemas/Pagina'
+                  - type: object
+                    properties:
+                      itens: { type: array, items: { $ref: '#/components/schemas/ContratoResumo' } }
+        default: { $ref: 'comum.yaml#/components/responses/Problema' }
+    post:
+      tags: [contratos]
+      summary: Cria rascunho de contrato (originação)
+      operationId: criarRascunho
+      parameters:
+        - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+        - $ref: 'comum.yaml#/components/parameters/ChaveIdempotencia'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RascunhoEntrada' }
+      responses:
+        '201':
+          description: Rascunho criado
+          headers:
+            X-Conciliacao-Situacao: { $ref: 'comum.yaml#/components/headers/X-Conciliacao-Situacao' }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Contrato' } } }
+        '422': { $ref: 'comum.yaml#/components/responses/Problema' }
+        default: { $ref: 'comum.yaml#/components/responses/Problema' }
+
+  /contratos/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+    get:
+      tags: [contratos]
+      summary: Detalha um contrato
+      operationId: obterContrato
+      responses:
+        '200':
+          description: Contrato
+          headers:
+            X-Conciliacao-Situacao: { $ref: 'comum.yaml#/components/headers/X-Conciliacao-Situacao' }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Contrato' } } }
+        '404': { $ref: 'comum.yaml#/components/responses/Problema' }
+
+  /contratos/{id}/transicoes:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+      - $ref: 'comum.yaml#/components/parameters/ChaveIdempotencia'
+    post:
+      tags: [contratos]
+      summary: Executa transição de estado
+      description: >
+        A transição é validada contra a máquina de estados (ops.transicao_permitida).
+        Contrato congelado recusa qualquer transição que não seja a reconciliação.
+      operationId: transicionar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [para, guarda]
+              properties:
+                para: { $ref: 'comum.yaml#/components/schemas/EstadoContrato' }
+                guarda: { type: string }
+                evidencia: { type: array, items: { $ref: 'comum.yaml#/components/schemas/Evidencia' } }
+      responses:
+        '200':
+          description: Transição aplicada
+          headers:
+            X-Conciliacao-Situacao: { $ref: 'comum.yaml#/components/headers/X-Conciliacao-Situacao' }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Contrato' } } }
+        '409': { $ref: 'comum.yaml#/components/responses/Congelado' }
+        '422':
+          description: Transição proibida pela máquina de estados
+          content: { application/problem+json: { schema: { $ref: 'comum.yaml#/components/schemas/Problema' } } }
+        '503': { $ref: 'comum.yaml#/components/responses/SemQuorum' }
+
+  /contratos/{id}/espelho:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+      - $ref: 'comum.yaml#/components/parameters/ChaveIdempotencia'
+    post:
+      tags: [contratos]
+      summary: Emite o espelho on-chain de um contrato REGISTRADO
+      description: >
+        Idempotente por âncora (P3): a segunda chamada para o mesmo registro
+        devolve o espelho existente, com 200, e jamais emite segundo token.
+        Falha se a conciliação inicial do registro não estiver conforme.
+      operationId: emitirEspelho
+      responses:
+        '200':
+          description: Espelho já existente (idempotência)
+          content: { application/json: { schema: { $ref: '#/components/schemas/Espelho' } } }
+        '201':
+          description: Espelho emitido
+          content: { application/json: { schema: { $ref: '#/components/schemas/Espelho' } } }
+        '409':
+          description: Âncora já utilizada por outro contrato (P3) ou contrato congelado (P1)
+          content: { application/problem+json: { schema: { $ref: 'comum.yaml#/components/schemas/Problema' } } }
+
+  /contratos/{id}/conciliacao:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+    get:
+      tags: [conciliacao]
+      summary: Situação de conciliação e divergências do contrato
+      operationId: obterConciliacao
+      responses:
+        '200':
+          description: Situação atual
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [situacao, divergencias, ultima_execucao_em]
+                properties:
+                  situacao: { $ref: 'comum.yaml#/components/schemas/SituacaoConciliacao' }
+                  ultima_execucao_em: { type: string, format: date-time }
+                  divergencias: { type: array, items: { $ref: '#/components/schemas/Divergencia' } }
+    post:
+      tags: [conciliacao]
+      summary: Dispara conciliação sob demanda para o contrato
+      operationId: conciliarAgora
+      responses:
+        '202': { description: Conciliação enfileirada }
+
+  /conciliacao/divergencias:
+    get:
+      tags: [conciliacao]
+      summary: Lista divergências
+      operationId: listarDivergencias
+      parameters:
+        - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+        - { name: estado, in: query, schema: { type: string, enum: [ABERTA, EM_RECONCILIACAO, RECONCILIADA, FALSO_POSITIVO] } }
+        - { name: severidade, in: query, schema: { $ref: 'comum.yaml#/components/schemas/Severidade' } }
+      responses:
+        '200':
+          description: Divergências
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Divergencia' } }
+
+  /conciliacao/divergencias/{id}/reconciliacao:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+      - $ref: 'comum.yaml#/components/parameters/ChaveIdempotencia'
+    post:
+      tags: [conciliacao]
+      summary: Registra reconciliação humana de uma divergência
+      description: >
+        Exige operador humano identificado e justificativa. Não existe rota de
+        reconciliação automática, e não existe rota que ajuste o registro para
+        acomodar o token — a correção sempre desce do registro para o espelho (P1).
+      operationId: reconciliar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decisao, justificativa, operador]
+              properties:
+                decisao: { type: string, enum: [ACEITAR_REGISTRO, MARCAR_FALSO_POSITIVO] }
+                justificativa: { type: string, minLength: 20 }
+                operador: { type: string, description: Identificador funcional do operador humano. }
+      responses:
+        '200':
+          description: Divergência reconciliada
+          content: { application/json: { schema: { $ref: '#/components/schemas/Divergencia' } } }
+        '403':
+          description: Tentativa de reconciliação por processo automático
+          content: { application/problem+json: { schema: { $ref: 'comum.yaml#/components/schemas/Problema' } } }
+
+  /contratos/{id}/garantias:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+    get:
+      tags: [garantias]
+      summary: Trilha de garantias do contrato
+      operationId: listarGarantias
+      responses:
+        '200':
+          description: Garantias por nível de waterfall
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Garantia' } }
+
+  /simulacoes/waterfall:
+    post:
+      tags: [garantias]
+      summary: Simula o percurso dos cinco níveis de absorção
+      description: >
+        Determinística por construção (P6): mesma política, mesmo cenário e
+        mesma semente produzem o mesmo hash_resultado.
+      operationId: simularWaterfall
+      parameters:
+        - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SimulacaoEntrada' }
+      responses:
+        '200':
+          description: Resultado da simulação
+          content: { application/json: { schema: { $ref: '#/components/schemas/SimulacaoResultado' } } }
+
+  /contratos/{id}/liquidacao:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+      - $ref: 'comum.yaml#/components/parameters/ChaveIdempotencia'
+    post:
+      tags: [liquidacao]
+      summary: Liquida o contrato mediante pagamento conciliado e baixa no registro
+      description: >
+        Exige leitura de PAGAMENTO com quórum (P4) e baixa confirmada no
+        registro. A plataforma não recebe, não custodia e não repassa recursos:
+        conciliá-los é tudo o que ela faz (P7).
+      operationId: liquidar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [leitura_pagamento_id, baixa_registro_ref]
+              properties:
+                leitura_pagamento_id: { type: string, format: uuid }
+                baixa_registro_ref: { type: string }
+      responses:
+        '200':
+          description: Contrato liquidado
+          headers:
+            X-Conciliacao-Situacao: { $ref: 'comum.yaml#/components/headers/X-Conciliacao-Situacao' }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Contrato' } } }
+        '409': { $ref: 'comum.yaml#/components/responses/Congelado' }
+        '503': { $ref: 'comum.yaml#/components/responses/SemQuorum' }
+
+  /contratos/{id}/trilha:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - $ref: 'comum.yaml#/components/parameters/CorrelacaoId'
+    get:
+      tags: [auditoria]
+      summary: O que se sabia, quando se soube e com base em quê
+      description: >
+        Contrato de fronteira com A6: alimenta o painel de auditoria, que deve
+        responder a essa pergunta em menos de três cliques (aceite de W6).
+      operationId: obterTrilha
+      parameters:
+        - { name: ate, in: query, schema: { type: string, format: date-time }, description: Reconstrói o conhecimento do sistema até o instante informado. }
+      responses:
+        '200':
+          description: Linha do tempo de conhecimento
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [quando, categoria, fato, origem]
+                  properties:
+                    quando: { type: string, format: date-time }
+                    categoria: { type: string, enum: [TRANSICAO, MARCACAO_MERCADO, DIVERGENCIA, EVIDENCIA_EUDR, LEITURA, INCIDENTE] }
+                    fato: { type: string }
+                    origem: { type: string }
+                    evidencia: { type: array, items: { $ref: 'comum.yaml#/components/schemas/Evidencia' } }
+
+components:
+  securitySchemes:
+    bearerAuth: { $ref: 'comum.yaml#/components/securitySchemes/bearerAuth' }
+    mtls: { $ref: 'comum.yaml#/components/securitySchemes/mtls' }
+  schemas:
+    ContratoResumo:
+      type: object
+      required: [id, estado, situacao_conciliacao, valor_face, vencimento]
+      properties:
+        id: { type: string, format: uuid }
+        registro_id: { type: string }
+        estado: { $ref: 'comum.yaml#/components/schemas/EstadoContrato' }
+        situacao_conciliacao: { $ref: 'comum.yaml#/components/schemas/SituacaoConciliacao' }
+        commodity: { $ref: 'comum.yaml#/components/schemas/Commodity' }
+        quantidade_sacas: { type: string }
+        valor_face: { $ref: 'comum.yaml#/components/schemas/Dinheiro' }
+        valor_mtm: { $ref: 'comum.yaml#/components/schemas/Dinheiro' }
+        vencimento: { type: string, format: date }
+        selo_eudr: { $ref: 'comum.yaml#/components/schemas/ResultadoEudr' }
+    Contrato:
+      allOf:
+        - $ref: '#/components/schemas/ContratoResumo'
+        - type: object
+          properties:
+            produtor_ref: { $ref: 'comum.yaml#/components/schemas/RefOpaca' }
+            credor_ref: { $ref: 'comum.yaml#/components/schemas/RefOpaca' }
+            registro_entidade: { type: string }
+            registro_hash_ancora: { $ref: 'comum.yaml#/components/schemas/Hash32' }
+            espelho: { $ref: '#/components/schemas/Espelho' }
+            congelado_em: { type: [string, 'null'], format: date-time }
+            congelado_motivo: { type: [string, 'null'] }
+    Espelho:
+      type: object
+      required: [chain_id, contrato_addr, token_id]
+      properties:
+        chain_id: { type: integer }
+        contrato_addr: { type: string, pattern: '^0x[0-9a-fA-F]{40}$' }
+        token_id: { type: string }
+        slot: { type: string }
+        tx_emissao: { $ref: 'comum.yaml#/components/schemas/Hash32' }
+        emitido_em: { type: string, format: date-time }
+    RascunhoEntrada:
+      type: object
+      required: [produtor_ref, commodity, quantidade_sacas, safra, vencimento, valor_face, talhoes]
+      description: >
+        Não recebe nome, CPF, endereço nem polígono: o produtor entra por
+        referência opaca e o talhão por identificador (P2).
+      properties:
+        produtor_ref: { $ref: 'comum.yaml#/components/schemas/RefOpaca' }
+        commodity: { $ref: 'comum.yaml#/components/schemas/Commodity' }
+        quantidade_sacas: { type: string, pattern: '^[0-9]+(\.[0-9]{1,4})?$' }
+        safra: { type: string, pattern: '^[0-9]{4}/[0-9]{4}$' }
+        vencimento: { type: string, format: date }
+        valor_face: { $ref: 'comum.yaml#/components/schemas/Dinheiro' }
+        talhoes:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [talhao_id, sacas_alocadas]
+            properties:
+              talhao_id: { type: string, format: uuid }
+              sacas_alocadas: { type: string }
+    Divergencia:
+      type: object
+      required: [id, tipo, severidade, estado, detectada_em]
+      properties:
+        id: { type: string, format: uuid }
+        contrato_id: { type: [string, 'null'], format: uuid }
+        tipo: { $ref: 'comum.yaml#/components/schemas/TipoDivergencia' }
+        severidade: { $ref: 'comum.yaml#/components/schemas/Severidade' }
+        estado: { type: string, enum: [ABERTA, EM_RECONCILIACAO, RECONCILIADA, FALSO_POSITIVO] }
+        campo: { type: [string, 'null'] }
+        valor_registro: { description: O que o registro afirma. Prevalece sempre (P1). }
+        valor_onchain: { description: O que o espelho afirma. Nunca corrige o registro. }
+        ocorrida_em: { type: [string, 'null'], format: date-time }
+        detectada_em: { type: string, format: date-time }
+        latencia_deteccao_ms: { type: [integer, 'null'] }
+        congelou_contrato: { type: boolean }
+        evidencia: { type: array, items: { $ref: 'comum.yaml#/components/schemas/Evidencia' } }
+    Garantia:
+      type: object
+      required: [id, tipo, nivel_waterfall, valor_declarado, estado_excussao]
+      properties:
+        id: { type: string, format: uuid }
+        tipo: { type: string, enum: [PENHOR_SAFRA, ALIENACAO_FIDUCIARIA_IMOVEL, ALIENACAO_FIDUCIARIA_MAQUINA, HIPOTECA, AVAL, FIANCA, SEGURO_AGRICOLA, CESSAO_RECEBIVEL, FUNDO_MUTUALIZADO, CAUCAO_TOKEN] }
+        nivel_waterfall: { type: integer, minimum: 1, maximum: 5 }
+        valor_declarado: { $ref: 'comum.yaml#/components/schemas/Dinheiro' }
+        valor_avaliado: { $ref: 'comum.yaml#/components/schemas/Dinheiro' }
+        estado_excussao: { type: string, enum: [NAO_ACIONADA, NOTIFICADA, EM_EXCUSSAO, EXCUTIDA, FRUSTRADA] }
+    SimulacaoEntrada:
+      type: object
+      required: [cenario, politica_id, semente]
+      properties:
+        cenario: { type: string, enum: [INADIMPLENCIA_ISOLADA, QUEBRA_SISTEMICA, QUEDA_PRECO_EXCUSSAO] }
+        politica_id: { type: string, format: uuid }
+        semente: { type: integer }
+        contratos: { type: array, items: { type: string, format: uuid } }
+        parametros:
+          type: object
+          properties:
+            choque_preco_pct: { type: number }
+            quebra_produtividade_pct: { type: number }
+            taxa_inadimplencia_pct: { type: number }
+    SimulacaoResultado:
+      type: object
+      required: [id, hash_resultado, exposicao_total, perda_residual, niveis]
+      properties:
+        id: { type: string, format: uuid }
+        hash_resultado: { $ref: 'comum.yaml#/components/schemas/Hash32' }
+        exposicao_total: { $ref: 'comum.yaml#/components/schemas/Dinheiro' }
+        perda_bruta: { $ref: 'comum.yaml#/components/schemas/Dinheiro' }
+        perda_residual: { $ref: 'comum.yaml#/components/schemas/Dinheiro' }
+        niveis:
+          type: array
+          items:
+            type: object
+            required: [nivel, absorvido, esgotado, recuperacao_dias_p50, recuperacao_dias_p90]
+            properties:
+              nivel: { type: integer, minimum: 1, maximum: 5 }
+              rotulo: { type: string }
+              absorvido: { $ref: 'comum.yaml#/components/schemas/Dinheiro' }
+              esgotado: { type: boolean }
+              recuperacao_dias_p50: { type: integer }
+              recuperacao_dias_p90: { type: integer }

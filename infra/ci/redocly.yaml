@@ -1,0 +1,26 @@
+# Configuração de lint das especificações congeladas.
+# Regras severas onde o briefing exige, silenciosas onde a regra é estética.
+apis:
+  core:
+    root: ../../docs/contracts/openapi/core.yaml
+  oracle:
+    root: ../../docs/contracts/openapi/oracle.yaml
+  eudr:
+    root: ../../docs/contracts/openapi/eudr.yaml
+  compliance:
+    root: ../../docs/contracts/openapi/compliance.yaml
+  registradora:
+    root: ../../docs/contracts/openapi/registradora.yaml
+rules:
+  struct: error
+  operation-operationId: error
+  operation-operationId-unique: error
+  operation-2xx-response: error
+  no-unresolved-refs: error
+  security-defined: off
+  info-license: off
+  operation-summary: error
+  tag-description: off
+  no-server-example.com: off
+  operation-4xx-response: off
+  no-ambiguous-paths: error
