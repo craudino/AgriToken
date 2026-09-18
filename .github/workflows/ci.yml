@@ -1,0 +1,51 @@
+# Portão de qualidade. Cada passo corresponde a um princípio da Seção 2 do
+# briefing; afrouxar qualquer um deles é mudança de contrato, não ajuste de CI.
+name: validar-contratos
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+jobs:
+  contratos:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_USER: ci
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+        ports: ['5432:5432']
+    env:
+      PGPASSWORD: ci
+      OPS_URL: postgres://ci:ci@localhost:5432/cpr_ops
+      PII_URL: postgres://ci:ci@localhost:5432/cpr_pii
+      AUDIT_URL: postgres://ci:ci@localhost:5432/cpr_audit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Cliente PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Bases separadas
+        # Em CI as três compartilham a instância; em qualquer outro ambiente a
+        # separação é física por decisão (ADR-0002).
+        run: |
+          for db in cpr_ops cpr_pii cpr_audit; do
+            createdb -h localhost -U ci "$db"
+          done
+      - name: Contratos de API
+        run: npm run validar:openapi
+      - name: Esquemas de evento
+        run: npm run validar:eventos
+      - name: Interfaces e ABIs
+        run: npm run validar:contratos
+      - name: Esquema de dados e conformidade
+        run: npm run validar:esquema

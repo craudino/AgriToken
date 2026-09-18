@@ -10,6 +10,21 @@ PGBIN="${PGBIN:-/usr/lib/postgresql/16/bin}"
 BASE="${BASE_TMP:-/var/lib/postgresql/cpr-ci}"
 PORTA="${PGPORT_CI:-5433}"
 
+# Caminho remoto: quando as três URLs são fornecidas (CI com serviço de banco),
+# aplica nelas em vez de subir cluster próprio. As bases precisam ser distintas.
+if [[ -n "${OPS_URL:-}" && -n "${PII_URL:-}" && -n "${AUDIT_URL:-}" ]]; then
+  "$RAIZ/infra/db/aplicar.sh"
+  falhas=0
+  psql "$OPS_URL"   -v ON_ERROR_STOP=1 -q -f "$ESQUEMAS/testes/conformidade_ops.sql"   2>&1 | sed 's/.*NOTICE:  //' || falhas=1
+  psql "$AUDIT_URL" -v ON_ERROR_STOP=1 -q -f "$ESQUEMAS/testes/conformidade_audit.sql" 2>&1 | sed 's/.*NOTICE:  //' || falhas=1
+  suspeitas=$(grep -nEi '^[[:space:]]+(cpf|cnpj|nome|email|e_mail|telefone|endereco|rg|conta_bancaria)[[:space:]]' \
+               "$ESQUEMAS/ops"/*.sql || true)
+  if [[ -n "$suspeitas" ]]; then
+    echo "ERRO (P2): coluna com nome de campo identificante em cpr_ops:"; echo "$suspeitas"; falhas=1
+  fi
+  [[ $falhas -eq 0 ]] && { echo "esquema conforme"; exit 0; } || { echo "esquema NAO conforme" >&2; exit 1; }
+fi
+
 # O PostgreSQL recusa rodar como root. Em runner root (contêiner de CI),
 # reexecuta o script sob um usuário sem privilégio.
 if [[ "$(id -u)" -eq 0 ]]; then
