@@ -114,7 +114,14 @@ for (let i = 0; i < N; i++) {
     const sorte = r();
     let centro;
     if (sorte < 0.12) centro = { lat: BASE_LAT + 0.20, lon: BASE_LON + 0.20, perfil: 'NAO_CONFORME' };
-    else if (sorte < 0.22) centro = { lat: BASE_LAT + 0.20 + 0.0150 + lado / 2, lon: BASE_LON + 0.20, perfil: 'LIMITROFE' };
+    else if (sorte < 0.22) {
+      // Limítrofe de verdade: encosta com sobreposição de poucos metros, dentro
+      // da margem de erro da base. Um polígono meramente adjacente não testa
+      // nada — dá sobreposição zero e o motor acerta por acidente.
+      const sobreposicaoGraus = 0.00008;   // ~9 m de faixa, ~0,3 ha
+      centro = { lat: BASE_LAT + 0.20 + 0.0150 + lado / 2 - sobreposicaoGraus,
+                 lon: BASE_LON + 0.20, perfil: 'LIMITROFE' };
+    }
     else centro = { lat: BASE_LAT + entre(-0.6, 0.6), lon: BASE_LON + entre(-0.6, 0.6), perfil: 'CONFORME' };
 
     talhoes.push({

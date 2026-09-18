@@ -130,3 +130,26 @@ em sete frentes paralelas depois.
   três decisões mais consequentes não estavam registradas.
 - Compatibilidade: documental.
 - Decisão: **aceita**.
+
+## SMC-009 — Geometria das bases de desmatamento no banco
+- Solicitante: A4
+- Artefato: `geo.desmatamento` em `docs/contracts/db/ops/070_eudr.sql`
+- Motivo: o cruzamento do polígono do talhão com as bases precisa ser feito
+  pelo PostGIS. Cruzamento em memória do serviço não é auditável nem
+  reproduzível, e a evidência de conformidade deixaria de sê-lo.
+- Impacto: A4 ingere as bases; A7 carrega a massa sintética.
+- Compatibilidade: aditiva.
+- Princípios: P5 e P6.
+- Decisão: **aceita**.
+
+## SMC-010 — Resolução espacial como coluna da base de referência
+- Solicitante: A4
+- Artefato: `ops.base_referencia_geo.resolucao_m`
+- Motivo: a faixa de incerteza do cruzamento estava como constante de código
+  (0,5 ha). Ela depende da resolução da base e do perímetro do talhão, porque o
+  erro mora nas bordas. Constante escolhida a dedo classifica como conforme o
+  que é apenas indistinguível — o falso conforme que contamina o colateral.
+- Impacto: A4 calcula a margem por talhão e base; A7 carrega a resolução.
+- Compatibilidade: aditiva, com padrão de 30 m.
+- Princípios: coerência da evidência (mandato de E5).
+- Decisão: **aceita**.

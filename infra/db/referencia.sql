@@ -21,9 +21,12 @@ ON CONFLICT (codigo) DO NOTHING;
 
 -- Bases de referência do EUDR. A data de corte é 31/12/2020 e é coluna, não
 -- constante: a aplicação do regulamento já foi adiada mais de uma vez.
-INSERT INTO ops.base_referencia_geo (codigo, versao, data_corte, cobertura, publicada_em, hash_dataset) VALUES
-  ('PRODES',    '2025.1', DATE '2020-12-31', 'Brasil',        DATE '2025-11-30', digest('prodes-2025.1','sha256')),
-  ('MAPBIOMAS', '9.0',    DATE '2020-12-31', 'Brasil',        DATE '2025-08-15', digest('mapbiomas-9.0','sha256'))
+-- resolucao_m: ordem de grandeza compatível com sensoriamento óptico de média
+-- resolução usado por essas bases. O valor exato de cada produto precisa ser
+-- confirmado na documentação da fonte antes do piloto. [#REF]
+INSERT INTO ops.base_referencia_geo (codigo, versao, data_corte, cobertura, publicada_em, resolucao_m, hash_dataset) VALUES
+  ('PRODES',    '2025.1', DATE '2020-12-31', 'Brasil', DATE '2025-11-30', 30, digest('prodes-2025.1','sha256')),
+  ('MAPBIOMAS', '9.0',    DATE '2020-12-31', 'Brasil', DATE '2025-08-15', 30, digest('mapbiomas-9.0','sha256'))
 ON CONFLICT (codigo, versao) DO NOTHING;
 
 -- Política de waterfall. Os números são hipótese de engenharia, calibrável por

@@ -11,10 +11,31 @@ CREATE TABLE ops.base_referencia_geo (
   data_corte    date NOT NULL DEFAULT DATE '2020-12-31',
   cobertura     text NOT NULL,
   publicada_em  date NOT NULL,
+  -- SMC-010: resolução espacial da base, em metros. A faixa de incerteza do
+  -- cruzamento não é uma constante escolhida a dedo: depende da resolução da
+  -- base e do perímetro do talhão, porque o erro mora nas bordas.
+  resolucao_m   integer NOT NULL DEFAULT 30 CHECK (resolucao_m > 0),
   ingerida_em   timestamptz NOT NULL DEFAULT now(),
   hash_dataset  ops.hash32 NOT NULL,      -- torna a evidência reproduzível (P6)
   UNIQUE (codigo, versao)
 );
+
+-- SMC-009 (aditiva): a geometria das bases de desmatamento precisa viver no
+-- banco para que o cruzamento seja feito pelo PostGIS, e não por código de
+-- aplicação. Cruzamento em memória não é auditável nem reproduzível.
+CREATE TABLE geo.desmatamento (
+  id            text NOT NULL,
+  base_id       uuid NOT NULL REFERENCES ops.base_referencia_geo(id) ON DELETE CASCADE,
+  ano_deteccao  integer NOT NULL,
+  geometria     geometry(MultiPolygon, 4326) NOT NULL,
+  ingerido_em   timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (base_id, id)
+);
+CREATE INDEX ix_desmatamento_gist ON geo.desmatamento USING gist (geometria);
+COMMENT ON TABLE geo.desmatamento IS
+  'Polígonos de desmatamento por base e ano. O ano é comparado com a data de '
+  'corte da base (31/12/2020), que é coluna e não constante: a aplicação do '
+  'regulamento já foi adiada mais de uma vez.';
 
 CREATE TABLE ops.evidencia_eudr (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -39,16 +39,32 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='cpr_audit_svc') THEN CREATE ROLE cpr_audit_svc LOGIN PASSWORD 'dev_audit'; END IF;
 END \$\$;"
 
+# CPR_RECRIAR=1 derruba e recria as três bases. É o caminho para aplicar
+# mudança de esquema em desenvolvimento: aplicar DDL por cima, ignorando erros
+# de "já existe", esconderia divergência entre o contrato congelado e o banco —
+# exatamente o risco que a Seção 11 do briefing coloca como mais provável.
+if [[ "${CPR_RECRIAR:-0}" == "1" ]]; then
+  for db in cpr_ops cpr_pii cpr_audit; do
+    "$PGBIN/dropdb" -h "$BASE/sock" -p "$PORTA" -U postgres --if-exists "$db"
+  done
+fi
+
+novas=()
 for db in cpr_ops cpr_pii cpr_audit; do
   if ! $psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1; then
     "$PGBIN/createdb" -h "$BASE/sock" -p "$PORTA" -U postgres "$db"
+    novas+=("$db")
   fi
 done
 
 for dir in ops pii audit; do
-  for f in "$RAIZ/docs/contracts/db/$dir"/*.sql; do
-    $psql -d "cpr_$dir" -f "$f" >/dev/null 2>&1 || true
-  done
+  if [[ " ${novas[*]:-} " == *" cpr_$dir "* ]]; then
+    for f in "$RAIZ/docs/contracts/db/$dir"/*.sql; do
+      $psql -d "cpr_$dir" -f "$f" >/dev/null
+    done
+  else
+    echo "cpr_$dir: já existe; DDL não reaplicado (use CPR_RECRIAR=1 após mudança de esquema)" >&2
+  fi
 done
 $psql -d cpr_ops -f "$RAIZ/infra/db/referencia.sql" >/dev/null
 
