@@ -21,3 +21,4 @@ coverage/
 coverage.json
 infra/enderecos.json
 .env
+.run/
