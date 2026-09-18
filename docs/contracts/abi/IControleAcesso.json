@@ -7,7 +7,34 @@
         "type": "bytes32"
       }
     ],
+    "name": "PapelExigeTimelock",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "papel",
+        "type": "bytes32"
+      }
+    ],
     "name": "PapelHumanoIndelegavel",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "papel",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
+      }
+    ],
+    "name": "PropostaInexistente",
     "type": "error"
   },
   {
@@ -110,6 +137,31 @@
       }
     ],
     "name": "PapelRevogado",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "papel",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "motivoHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "PropostaCancelada",
     "type": "event"
   },
   {
@@ -227,11 +279,119 @@
         "internalType": "address",
         "name": "conta",
         "type": "address"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "motivoHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "cancelarProposta",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "papel",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
       }
     ],
     "name": "conceder",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "papel",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
+      }
+    ],
+    "name": "executarProposta",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "papel",
+        "type": "bytes32"
+      }
+    ],
+    "name": "papelSensivel",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "papel",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
+      }
+    ],
+    "name": "propor",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "executavelEm",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "papel",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
+      }
+    ],
+    "name": "propostaExecutavelEm",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {

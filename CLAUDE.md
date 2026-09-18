@@ -35,7 +35,10 @@ reproduzível a partir do log.
 **P7 — Fronteira regulatória codificada.** O sistema não executa novação, não
 se interpõe como contraparte, não custodia ativo virtual de terceiro e não
 promete rendimento. Estas proibições existem como testes automatizados que
-falham se a fronteira for cruzada.
+falham se a fronteira for cruzada: `validar:contratos` sobre as ABIs e
+`validar:p7` sobre o código-fonte de `services/`, `apps/`, `contracts/` e
+`infra/`, incluindo o texto exibido ao usuário. Até G1 a verificação alcançava
+só as interfaces, e o painel apontou a lacuna — ver SMC-003.
 
 **Em conflito entre conveniência de implementação e princípio: pare e escale.
 Não contorne.**
@@ -67,6 +70,7 @@ npm run validar            # tudo abaixo, na ordem
 npm run validar:openapi    # lint 3.1 + invariantes de fronteira
 npm run validar:eventos    # esquemas, exemplos e varredura de PII
 npm run validar:contratos  # compila interfaces, compara ABIs congeladas
+npm run validar:p7         # fronteira regulatória no código-fonte e no texto
 npm run validar:esquema    # sobe bases efêmeras e roda conformidade do DDL
 ```
 

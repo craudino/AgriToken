@@ -117,18 +117,37 @@ CREATE TABLE ops.uso_leitura (
 -- Nenhuma decisão contratual consome leitura sem efeito.
 CREATE OR REPLACE FUNCTION ops.fn_valida_uso_leitura() RETURNS trigger
 LANGUAGE plpgsql AS $$
-DECLARE v_estado ops.estado_leitura; v_crit ops.criticidade_leitura;
+DECLARE v_l record; v_p record;
 BEGIN
-  SELECT l.estado, p.criticidade INTO v_estado, v_crit
-    FROM ops.leitura_oraculo l
-    JOIN ops.politica_quorum p ON p.tipo_leitura = l.tipo_leitura
-   WHERE l.id = NEW.leitura_id;
-  IF v_crit = 'INFORMATIVA' THEN
+  SELECT l.* INTO v_l FROM ops.leitura_oraculo l WHERE l.id = NEW.leitura_id;
+  SELECT p.* INTO v_p FROM ops.politica_quorum p WHERE p.tipo_leitura = v_l.tipo_leitura;
+
+  IF v_p.criticidade = 'INFORMATIVA' THEN
     RAISE EXCEPTION 'leitura informativa nao pode sustentar decisao contratual (P4)';
   END IF;
-  IF v_estado NOT IN ('EFETIVA','DEGRADADA') THEN
-    RAISE EXCEPTION 'leitura em estado % nao produz efeito contratual (P4)', v_estado;
+  IF v_l.estado NOT IN ('EFETIVA','DEGRADADA') THEN
+    RAISE EXCEPTION 'leitura em estado % nao produz efeito contratual (P4)', v_l.estado;
   END IF;
+
+  -- SMC-002. O ramo DEGRADADA era a porta dos fundos de P4: bastava marcar a
+  -- leitura como degradada com uma fonte independente para sustentar decisão
+  -- contratual, e daí até o gatilho de LTV e a excussão. Degradar pode reduzir
+  -- o número total de fontes; nunca a redundância independente.
+  IF v_l.fontes_independentes < v_p.min_fontes_independentes THEN
+    RAISE EXCEPTION 'leitura com % fonte(s) independente(s); politica exige % (P4)',
+      v_l.fontes_independentes, v_p.min_fontes_independentes;
+  END IF;
+  IF v_l.estado = 'EFETIVA' AND v_l.fontes_usadas < v_p.min_fontes THEN
+    RAISE EXCEPTION 'leitura com % fonte(s); politica exige % (P4)',
+      v_l.fontes_usadas, v_p.min_fontes;
+  END IF;
+  IF v_l.estado = 'DEGRADADA' AND NOT v_p.permite_degradado THEN
+    RAISE EXCEPTION 'politica de % nao admite degradacao (P4)', v_l.tipo_leitura;
+  END IF;
+  IF v_l.expira_em <= now() THEN
+    RAISE EXCEPTION 'leitura expirada em % nao produz efeito contratual (P4)', v_l.expira_em;
+  END IF;
+
   RETURN NEW;
 END
 $$;
@@ -136,6 +155,32 @@ $$;
 CREATE TRIGGER tg_valida_uso_leitura
   BEFORE INSERT ON ops.uso_leitura
   FOR EACH ROW EXECUTE FUNCTION ops.fn_valida_uso_leitura();
+
+-- SMC-002: e na origem. Marcar como EFETIVA ou DEGRADADA uma leitura que não
+-- atinge o quórum da política é erro do adaptador, e erro de adaptador não
+-- deve depender de quem consome para ser descoberto.
+CREATE OR REPLACE FUNCTION ops.fn_valida_quorum_leitura() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE v_p record;
+BEGIN
+  IF NEW.estado NOT IN ('EFETIVA','DEGRADADA') THEN
+    RETURN NEW;
+  END IF;
+  SELECT p.* INTO v_p FROM ops.politica_quorum p WHERE p.tipo_leitura = NEW.tipo_leitura;
+  IF v_p.criticidade = 'CONTRATUAL' AND NEW.fontes_independentes < v_p.min_fontes_independentes THEN
+    RAISE EXCEPTION 'leitura % nao atinge quorum independente da politica (% < %) (P4)',
+      NEW.tipo_leitura, NEW.fontes_independentes, v_p.min_fontes_independentes;
+  END IF;
+  IF NEW.estado = 'DEGRADADA' AND NOT v_p.permite_degradado THEN
+    RAISE EXCEPTION 'politica de % nao admite degradacao (P4)', NEW.tipo_leitura;
+  END IF;
+  RETURN NEW;
+END
+$$;
+
+CREATE TRIGGER tg_valida_quorum_leitura
+  BEFORE INSERT OR UPDATE ON ops.leitura_oraculo
+  FOR EACH ROW EXECUTE FUNCTION ops.fn_valida_quorum_leitura();
 
 -- Marcação a mercado (F5)
 CREATE TABLE ops.marcacao_mercado (

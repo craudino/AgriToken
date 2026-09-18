@@ -64,7 +64,12 @@ CREATE TYPE ops.tipo_divergencia AS ENUM (
   'TOKEN_AUSENTE_PARA_REGISTRO',     -- 9  registro sem espelho correspondente
   'DUPLICIDADE_DE_ANCORA',           -- 10 dois tokens ativos para um registro (viola P3)
   'ESTADO_DIVERGENTE',               -- 11 ciclo de vida incompatível
-  'HASH_DOCUMENTAL_DIVERGENTE'       -- 12 conteúdo do título mudou sem novo espelho
+  'HASH_DOCUMENTAL_DIVERGENTE',      -- 12 conteúdo do título mudou sem novo espelho
+  -- SMC-004: o catálogo original só enxergava o sentido registro -> token.
+  -- E1 apontou em G1 que a fração pode circular on-chain sem cessão registrada
+  -- e a conciliação seria cega a isso. Estes dois fecham o sentido inverso.
+  'TRANSFERENCIA_SEM_CESSAO',        -- 13 titular on-chain mudou sem cessão no registro
+  'FRACIONAMENTO_NAO_REFLETIDO'      -- 14 frações emitidas on-chain sem lastro registrado
 );
 
 CREATE TYPE ops.severidade AS ENUM ('INFORMATIVA','BAIXA','MEDIA','ALTA','CRITICA');

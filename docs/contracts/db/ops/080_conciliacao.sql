@@ -65,11 +65,16 @@ CREATE TABLE ops.divergencia (
   congelou_contrato boolean NOT NULL DEFAULT false,
   incidente_id      uuid,
   reconciliada_em   timestamptz,
-  reconciliada_por  text,
+  -- SMC-001: identificador funcional do operador humano, com forma verificável.
+  -- 'reconciliada_por text NOT NULL' aceitava a string 'bot'.
+  reconciliada_por  text CHECK (reconciliada_por ~ '^OP-[A-Z0-9-]{3,}$'),
   reconciliacao_nota ops.texto_sem_pii,
+  reconciliacao_justificativa_hash ops.hash32,
   CONSTRAINT critica_congela CHECK (severidade <> 'CRITICA' OR congelou_contrato),
   CONSTRAINT reconciliacao_tem_autor
-    CHECK ((estado IN ('RECONCILIADA','FALSO_POSITIVO')) = (reconciliada_por IS NOT NULL))
+    CHECK ((estado IN ('RECONCILIADA','FALSO_POSITIVO')) = (reconciliada_por IS NOT NULL)),
+  CONSTRAINT reconciliacao_tem_justificativa
+    CHECK ((estado IN ('RECONCILIADA','FALSO_POSITIVO')) = (reconciliacao_justificativa_hash IS NOT NULL))
 );
 CREATE INDEX ix_divergencia_aberta ON ops.divergencia (estado, severidade) WHERE estado = 'ABERTA';
 CREATE INDEX ix_divergencia_contrato ON ops.divergencia (contrato_id, detectada_em DESC);
@@ -99,6 +104,8 @@ INSERT INTO ops.politica_divergencia (tipo, severidade, congela, sla_deteccao, a
   ('TITULO_INEXISTENTE_NO_REGISTRO', 'CRITICA', true,  interval '15 minutes', 'CONGELAR_E_ESCALAR'),
   ('TOKEN_AUSENTE_PARA_REGISTRO',    'MEDIA',   false, interval '6 hours',    'ABRIR_INCIDENTE'),
   ('DUPLICIDADE_DE_ANCORA',          'CRITICA', true,  interval '1 minute',   'CONGELAR_AMBOS_E_ESCALAR'),
+  ('TRANSFERENCIA_SEM_CESSAO',       'CRITICA', true,  interval '5 minutes',  'CONGELAR_E_ESCALAR'),
+  ('FRACIONAMENTO_NAO_REFLETIDO',    'CRITICA', true,  interval '5 minutes',  'CONGELAR_E_ESCALAR'),
   ('ESTADO_DIVERGENTE',              'ALTA',    true,  interval '1 hour',     'CONGELAR_E_ABRIR_INCIDENTE'),
   ('HASH_DOCUMENTAL_DIVERGENTE',     'ALTA',    true,  interval '1 hour',     'CONGELAR_E_ABRIR_INCIDENTE');
 
@@ -117,6 +124,11 @@ CREATE TABLE ops.incidente (
 
 ALTER TABLE ops.divergencia
   ADD CONSTRAINT fk_divergencia_incidente FOREIGN KEY (incidente_id) REFERENCES ops.incidente(id);
+
+-- SMC-001: fecha o ciclo. A transição de saída do congelamento aponta para a
+-- divergência reconciliada, e a FK torna impossível apontar para o vazio.
+ALTER TABLE ops.contrato_transicao
+  ADD CONSTRAINT fk_transicao_divergencia FOREIGN KEY (divergencia_id) REFERENCES ops.divergencia(id);
 
 -- ---------------------------------------------------------------------------
 -- Simulador de registradora (Seção 6.2). Schema separado e papel separado:

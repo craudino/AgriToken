@@ -36,12 +36,31 @@ CREATE TABLE ops.garantia (
   valor_avaliado     ops.valor_brl,
   avaliacao_leitura_id uuid,                        -- FK lógica p/ ops.leitura_oraculo
   registro_publico_ref ops.texto_sem_pii,           -- matrícula/averbação (sem nome de pessoa)
+  -- SMC-006. E1 apontou em G1 que o waterfall atribuía cap, deságio e prazo a
+  -- níveis cujo grau de oponibilidade não era representável — simulando como
+  -- colateral o que, na execução, pode ser papel. Garantia real sem averbação
+  -- não é oponível a terceiros, e o modelo precisa saber a diferença.
+  oponibilidade  text NOT NULL DEFAULT 'NAO_AVERBADA'
+                 CHECK (oponibilidade IN ('NAO_AVERBADA','EM_AVERBACAO','AVERBADA','RECUSADA')),
+  averbada_em    date,
+  averbacao_ref  ops.texto_sem_pii,
+  averbacao_evidencia_hash ops.hash32,
   talhao_id          uuid REFERENCES ops.talhao(id),
   estado_excussao    ops.estado_excussao NOT NULL DEFAULT 'NAO_ACIONADA',
   vinculada_em       timestamptz NOT NULL DEFAULT now(),
   liberada_em        timestamptz,
   CONSTRAINT penhor_safra_tem_talhao
-    CHECK (tipo <> 'PENHOR_SAFRA' OR talhao_id IS NOT NULL)
+    CHECK (tipo <> 'PENHOR_SAFRA' OR talhao_id IS NOT NULL),
+  CONSTRAINT averbada_tem_data
+    CHECK ((oponibilidade = 'AVERBADA') = (averbada_em IS NOT NULL)),
+  -- Garantia real só ocupa nível 1 ou 2 do waterfall se for oponível. Sem
+  -- isso, a simulação promete recuperação que a execução não entrega.
+  CONSTRAINT nivel_alto_exige_oponibilidade CHECK (
+    nivel_waterfall > 2
+    OR tipo NOT IN ('PENHOR_SAFRA','ALIENACAO_FIDUCIARIA_IMOVEL',
+                    'ALIENACAO_FIDUCIARIA_MAQUINA','HIPOTECA')
+    OR oponibilidade = 'AVERBADA'
+  )
 );
 CREATE INDEX ix_garantia_contrato ON ops.garantia (contrato_id);
 

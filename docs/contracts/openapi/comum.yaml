@@ -92,6 +92,8 @@ components:
         - DUPLICIDADE_DE_ANCORA
         - ESTADO_DIVERGENTE
         - HASH_DOCUMENTAL_DIVERGENTE
+        - TRANSFERENCIA_SEM_CESSAO
+        - FRACIONAMENTO_NAO_REFLETIDO
     Severidade:
       type: string
       enum: [INFORMATIVA, BAIXA, MEDIA, ALTA, CRITICA]

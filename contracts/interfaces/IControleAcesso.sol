@@ -12,10 +12,13 @@ interface IControleAcesso {
     event PapelConcedido(bytes32 indexed papel, address indexed conta, address indexed autor);
     event PapelRevogado(bytes32 indexed papel, address indexed conta, address indexed autor);
     event PapelPropostoComTimelock(bytes32 indexed papel, address indexed conta, uint256 executavelEm);
+    event PropostaCancelada(bytes32 indexed papel, address indexed conta, bytes32 motivoHash);
 
     error SemPapel(bytes32 papel, address conta);
     error TimelockPendente(uint256 executavelEm);
     error PapelHumanoIndelegavel(bytes32 papel);
+    error PropostaInexistente(bytes32 papel, address conta);
+    error PapelExigeTimelock(bytes32 papel);
 
     /// @notice Origina contratos e submete rascunhos.
     function PAPEL_ORIGINADOR() external view returns (bytes32);
@@ -41,8 +44,34 @@ interface IControleAcesso {
 
     function temPapel(bytes32 papel, address conta) external view returns (bool);
 
+    /// @notice Propõe a concessão de um papel sensível.
+    /// @dev    SMC-005. O timelock existia como evento e getter, e `conceder`
+    ///         era chamada única e imediata — o red team apontou em G1 que a
+    ///         garantia estava no NatSpec, não no código. A proposta é agora
+    ///         etapa obrigatória para os papéis sensíveis, e o intervalo entre
+    ///         proposta e execução é o que dá ao credor tempo de observar uma
+    ///         mudança nas regras do ativo que ele detém.
+    /// @return executavelEm Instante a partir do qual a proposta pode ser executada.
+    function propor(bytes32 papel, address conta) external returns (uint256 executavelEm);
+
+    /// @notice Executa proposta cujo timelock venceu.
+    function executarProposta(bytes32 papel, address conta) external;
+
+    /// @notice Cancela proposta pendente.
+    function cancelarProposta(bytes32 papel, address conta, bytes32 motivoHash) external;
+
+    /// @return Instante de execução da proposta pendente, ou zero se não houver.
+    function propostaExecutavelEm(bytes32 papel, address conta) external view returns (uint256);
+
+    /// @return Verdadeiro se o papel exige proposta e timelock.
+    function papelSensivel(bytes32 papel) external view returns (bool);
+
+    /// @notice Concede papel não sensível, de efeito imediato.
+    /// @dev    Reverte para papel sensível: esses passam por propor/executar.
     function conceder(bytes32 papel, address conta) external;
 
+    /// @notice Revoga papel. Revogação é imediata por desenho — atrasar a
+    ///         retirada de um papel comprometido seria proteger o atacante.
     function revogar(bytes32 papel, address conta) external;
 
     /// @return Atraso mínimo, em segundos, entre proposta e concessão de papel sensível.

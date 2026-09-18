@@ -82,6 +82,63 @@ SELECT pg_temp.deve_falhar($$
           'TITULO_BAIXADO_NO_REGISTRO','CRITICA', false)
 $$, 'P1: divergência crítica sem congelar o contrato');
 
+-- SMC-001 — o ataque que passava em G1: destrancar o congelamento escrevendo
+-- a string da guarda, sem divergência reconciliada e sem operador humano.
+SELECT pg_temp.deve_falhar($$
+  INSERT INTO ops.contrato_transicao (contrato_id, de, para, guarda, origem)
+  VALUES ('33333333-3333-3333-3333-333333333333','EM_DISPUTA','ATIVO',
+          'divergencia_reconciliada','bot-qualquer')
+$$, 'P1: destrancar congelamento pela string, sem divergencia_id');
+
+INSERT INTO ops.divergencia (id, execucao_id, contrato_id, tipo, severidade, congelou_contrato)
+VALUES ('aaaaaaaa-0000-4000-8000-000000000001','44444444-4444-4444-4444-444444444444',
+        '33333333-3333-3333-3333-333333333333','VALOR_FACE_ALTERADO','CRITICA', true);
+
+SELECT pg_temp.deve_falhar($$
+  INSERT INTO ops.contrato_transicao (contrato_id, de, para, guarda, origem, ator_tipo, ator_ref, divergencia_id)
+  VALUES ('33333333-3333-3333-3333-333333333333','EM_DISPUTA','ATIVO',
+          'divergencia_reconciliada','services/core','HUMANO', decode(repeat('c1',16),'hex'),
+          'aaaaaaaa-0000-4000-8000-000000000001')
+$$, 'P1: destrancar apontando para divergencia ainda ABERTA');
+
+UPDATE ops.divergencia
+   SET estado = 'RECONCILIADA', reconciliada_em = now(), reconciliada_por = 'OP-CONCILIACAO-07',
+       reconciliacao_justificativa_hash = digest('registro prevalece','sha256')::ops.hash32
+ WHERE id = 'aaaaaaaa-0000-4000-8000-000000000001';
+
+SELECT pg_temp.deve_falhar($$
+  INSERT INTO ops.contrato_transicao (contrato_id, de, para, guarda, origem, ator_tipo, divergencia_id)
+  VALUES ('33333333-3333-3333-3333-333333333333','EM_DISPUTA','ATIVO',
+          'divergencia_reconciliada','services/core','SERVICO',
+          'aaaaaaaa-0000-4000-8000-000000000001')
+$$, 'P1: destrancar por processo automático, sem ator humano');
+
+-- E o caminho legítimo precisa funcionar, senão a trava virou paralisia.
+INSERT INTO ops.contrato_transicao (contrato_id, de, para, guarda, origem, ator_tipo, ator_ref, divergencia_id)
+VALUES ('33333333-3333-3333-3333-333333333333','EM_DISPUTA','ATIVO','divergencia_reconciliada',
+        'services/core','HUMANO', decode(repeat('c1',16),'hex'),
+        'aaaaaaaa-0000-4000-8000-000000000001');
+DO $$ BEGIN RAISE NOTICE 'OK  P1: reconciliação humana com divergência reconciliada é aceita'; END $$;
+
+-- Reconciliada a divergência, o núcleo descongela o contrato. Sem este passo,
+-- o teste seguinte seria recusado pelo congelamento e não pela guarda — e um
+-- teste que passa pelo motivo errado é o defeito que o painel encontrou aqui.
+UPDATE ops.contrato
+   SET situacao_conciliacao = 'CONCILIADO', congelado_em = NULL, congelado_motivo = NULL
+ WHERE id = '33333333-3333-3333-3333-333333333333';
+
+-- SMC-001 — a guarda deixou de ser texto livre
+SELECT pg_temp.deve_falhar($$
+  INSERT INTO ops.contrato_transicao (contrato_id, de, para, guarda, origem)
+  VALUES ('33333333-3333-3333-3333-333333333333','ATIVO','INADIMPLENTE','guarda_inventada','services/core')
+$$, 'P1: guarda que não existe no grafo de transições');
+
+-- E a guarda correta para a mesma transição é aceita.
+INSERT INTO ops.contrato_transicao (contrato_id, de, para, guarda, origem)
+VALUES ('33333333-3333-3333-3333-333333333333','ATIVO','INADIMPLENTE',
+        'vencido_sem_liquidacao','services/core');
+DO $$ BEGIN RAISE NOTICE 'OK  P1: guarda correta do grafo é aceita'; END $$;
+
 -- P4 — sem quórum não há decisão contratual --------------------------------
 SELECT pg_temp.deve_falhar($$
   UPDATE ops.politica_quorum SET min_fontes = 1, min_fontes_independentes = 1
@@ -107,6 +164,34 @@ SELECT pg_temp.deve_falhar($$
   INSERT INTO ops.uso_leitura (leitura_id, decisao_tipo, decisao_id)
   VALUES ('66666666-6666-6666-6666-666666666666','GATILHO_INADIMPLENCIA','33333333-3333-3333-3333-333333333333')
 $$, 'P4: leitura informativa sustentando decisão contratual');
+
+-- SMC-002 — o outro ataque que passava em G1: preço DEGRADADO com uma única
+-- fonte independente sustentando marcação a mercado, e daí até a excussão.
+SELECT pg_temp.deve_falhar($$
+  INSERT INTO ops.leitura_oraculo (tipo_leitura, chave, valor_numerico, referencia_em, expira_em,
+                                   estado, fontes_usadas, fontes_independentes, politica_snapshot, hash_linhagem)
+  VALUES ('PRECO','CAFE_ARABICA/BRL-SACA', 900.00, now(), now() + interval '36 hours',
+          'DEGRADADA', 1, 1, '{}'::jsonb, digest('d','sha256')::ops.hash32)
+$$, 'P4: marcar como DEGRADADA leitura abaixo do quórum independente');
+
+INSERT INTO ops.leitura_oraculo (id, tipo_leitura, chave, valor_numerico, referencia_em, expira_em,
+                                 estado, fontes_usadas, fontes_independentes, politica_snapshot, hash_linhagem)
+VALUES ('77777777-0000-4000-8000-000000000001','PRECO','CAFE_ARABICA/BRL-SACA', 1480.00,
+        now(), now() + interval '36 hours','DEGRADADA', 2, 2, '{}'::jsonb, digest('e','sha256')::ops.hash32);
+INSERT INTO ops.uso_leitura (leitura_id, decisao_tipo, decisao_id)
+VALUES ('77777777-0000-4000-8000-000000000001','MTM','33333333-3333-3333-3333-333333333333');
+DO $$ BEGIN RAISE NOTICE 'OK  P4: degradação com redundância independente preservada é aceita'; END $$;
+
+-- Leitura expirada não produz efeito, por mais efetiva que esteja marcada.
+INSERT INTO ops.leitura_oraculo (id, tipo_leitura, chave, valor_numerico, referencia_em, expira_em,
+                                 estado, fontes_usadas, fontes_independentes, politica_snapshot, hash_linhagem)
+VALUES ('77777777-0000-4000-8000-000000000002','PRECO','CAFE_ARABICA/BRL-SACA', 1480.00,
+        now() - interval '3 days', now() - interval '1 day','EFETIVA', 3, 2, '{}'::jsonb,
+        digest('f','sha256')::ops.hash32);
+SELECT pg_temp.deve_falhar($$
+  INSERT INTO ops.uso_leitura (leitura_id, decisao_tipo, decisao_id)
+  VALUES ('77777777-0000-4000-8000-000000000002','MTM','33333333-3333-3333-3333-333333333333')
+$$, 'P4: leitura expirada sustentando decisão contratual');
 
 -- P5 — evento é imutável ----------------------------------------------------
 INSERT INTO ops.evento (id, tipo, sujeito_tipo, sujeito_id, correlacao_id, origem, ocorrido_em, payload, payload_hash)
@@ -134,14 +219,26 @@ INSERT INTO ops.talhao (id, produtor_id, car_ref, car_hash, area_declarada_ha, c
 VALUES ('99999999-9999-9999-9999-999999999999','11111111-1111-1111-1111-111111111111',
         'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', digest('car','sha256')::ops.hash32, 12.5,'CAFE_ARABICA');
 
-INSERT INTO ops.garantia (contrato_id, tipo, nivel_waterfall, valor_declarado, talhao_id)
+INSERT INTO ops.garantia (contrato_id, tipo, nivel_waterfall, valor_declarado, talhao_id,
+                          oponibilidade, averbada_em, averbacao_ref)
 VALUES ('33333333-3333-3333-3333-333333333333','PENHOR_SAFRA',1, 400000.00,
-        '99999999-9999-9999-9999-999999999999');
+        '99999999-9999-9999-9999-999999999999','AVERBADA', DATE '2026-09-01','AVERB-001');
 
 SELECT pg_temp.deve_falhar($$
-  INSERT INTO ops.garantia (contrato_id, tipo, nivel_waterfall, valor_declarado, talhao_id)
+  INSERT INTO ops.garantia (contrato_id, tipo, nivel_waterfall, valor_declarado, talhao_id,
+                            oponibilidade, averbada_em)
   VALUES ('33333333-3333-3333-3333-333333333333','PENHOR_SAFRA',1, 100000.00,
-          '99999999-9999-9999-9999-999999999999')
+          '99999999-9999-9999-9999-999999999999','AVERBADA', DATE '2026-09-01')
 $$, 'P3: segundo penhor sobre o mesmo talhão');
+
+-- SMC-006 — garantia real em nível alto do waterfall exige oponibilidade
+INSERT INTO ops.talhao (id, produtor_id, car_ref, car_hash, area_declarada_ha, commodity)
+VALUES ('99999999-0000-4000-8000-000000000002','11111111-1111-1111-1111-111111111111',
+        'aaaaaaaa-0000-4000-8000-00000000000a', digest('car2','sha256')::ops.hash32, 8.0,'CAFE_ARABICA');
+SELECT pg_temp.deve_falhar($$
+  INSERT INTO ops.garantia (contrato_id, tipo, nivel_waterfall, valor_declarado, talhao_id)
+  VALUES ('33333333-3333-3333-3333-333333333333','PENHOR_SAFRA',1, 200000.00,
+          '99999999-0000-4000-8000-000000000002')
+$$, 'SMC-006: penhor não averbado ocupando nível 1 do waterfall');
 
 ROLLBACK;

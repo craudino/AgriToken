@@ -11,6 +11,10 @@ pior.
 | [0002](0002-privacidade-onchain-offchain.md) | Estratégia de privacidade on-chain/off-chain | Proposto — pendente de G1 |
 | [0003](0003-politica-quorum-oraculos.md) | Política de quórum de oráculos | Proposto — pendente de G1 |
 | [0004](0004-upgradeability-contratos.md) | Upgradeability dos contratos | Proposto — pendente de G1 |
+| [0005](0005-perimetro-regulatorio.md) | Perímetro regulatório | Proposto — lacuna apontada por E1 em G1 |
+| [0006](0006-premissas-da-registradora.md) | Premissas do simulador de registradora | Proposto — lacuna apontada por E6 em G1 |
+| [0007](0007-tensao-p1-p7.md) | Tensão entre congelamento e não-controle | Proposto — tensão apontada pelo red team em G1 |
+| [0008](0008-desvios-de-ambiente-do-prototipo.md) | Desvios de stack do protótipo | Aceito |
 
 ## Estados
 

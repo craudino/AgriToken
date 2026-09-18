@@ -128,8 +128,14 @@ CREATE TABLE ops.contrato_transicao (
   guarda        text NOT NULL,
   motivo        ops.texto_sem_pii,
   ator_ref      ops.ref_opaca,                  -- quem acionou (opaco)
+  ator_tipo     text NOT NULL DEFAULT 'SERVICO'
+                  CHECK (ator_tipo IN ('HUMANO','SERVICO','AGENDA','EXTERNO')),
   origem        text NOT NULL,                  -- serviço/agente emissor
   evidencia     jsonb NOT NULL DEFAULT '[]',    -- refs de leitura, evidência EUDR, tx
+  -- SMC-001: a saída do congelamento deixa de ser uma string. A transição
+  -- aponta para a divergência efetivamente reconciliada, e a FK é o que
+  -- impede forjar a reconciliação escrevendo o nome da guarda.
+  divergencia_id uuid,
   evento_id     uuid,                           -- correlação com ops.evento
   ocorrido_em   timestamptz NOT NULL DEFAULT now()
 );
@@ -149,6 +155,11 @@ BEGIN
                   WHERE t.de = NEW.de AND t.para = NEW.para) THEN
     RAISE EXCEPTION 'transicao proibida: % -> %', NEW.de, NEW.para;
   END IF;
+  -- SMC-001: a guarda é a do grafo, não um rótulo escolhido pelo chamador.
+  IF NOT EXISTS (SELECT 1 FROM ops.transicao_permitida t
+                  WHERE t.de = NEW.de AND t.para = NEW.para AND t.guarda = NEW.guarda) THEN
+    RAISE EXCEPTION 'guarda % nao corresponde a transicao % -> %', NEW.guarda, NEW.de, NEW.para;
+  END IF;
   RETURN NEW;
 END
 $$;
@@ -161,13 +172,56 @@ CREATE TRIGGER tg_valida_transicao
 -- divergência seja antes reconciliada por decisão humana registrada.
 CREATE OR REPLACE FUNCTION ops.fn_bloqueia_congelado() RETURNS trigger
 LANGUAGE plpgsql AS $$
-DECLARE v_situacao ops.situacao_conciliacao;
+DECLARE
+  v_situacao ops.situacao_conciliacao;
+  v_div      record;
+  v_abertas  integer;
 BEGIN
   SELECT situacao_conciliacao INTO v_situacao FROM ops.contrato WHERE id = NEW.contrato_id;
-  IF v_situacao = 'CONGELADO' AND NEW.guarda <> 'divergencia_reconciliada' THEN
+  IF v_situacao <> 'CONGELADO' THEN
+    RETURN NEW;
+  END IF;
+
+  -- SMC-001. Antes, bastava escrever 'divergencia_reconciliada' na coluna de
+  -- guarda para destrancar o congelamento — sem divergência reconciliada, sem
+  -- operador humano e sem ator. O red team reproduziu o ataque em G1. Agora a
+  -- saída exige prova, e a prova é uma linha de ops.divergencia.
+  IF NEW.guarda <> 'divergencia_reconciliada' THEN
     RAISE EXCEPTION 'contrato congelado por divergencia de conciliacao (P1): % -> % bloqueada',
       NEW.de, NEW.para;
   END IF;
+
+  IF NEW.divergencia_id IS NULL THEN
+    RAISE EXCEPTION 'saida de congelamento exige divergencia_id (P1)';
+  END IF;
+
+  SELECT * INTO v_div FROM ops.divergencia WHERE id = NEW.divergencia_id;
+  IF v_div IS NULL THEN
+    RAISE EXCEPTION 'divergencia % inexistente (P1)', NEW.divergencia_id;
+  END IF;
+  IF v_div.contrato_id IS DISTINCT FROM NEW.contrato_id THEN
+    RAISE EXCEPTION 'divergencia % pertence a outro contrato (P1)', NEW.divergencia_id;
+  END IF;
+  IF v_div.estado NOT IN ('RECONCILIADA','FALSO_POSITIVO') THEN
+    RAISE EXCEPTION 'divergencia % ainda em % (P1)', NEW.divergencia_id, v_div.estado;
+  END IF;
+  IF v_div.reconciliada_por IS NULL THEN
+    RAISE EXCEPTION 'divergencia % sem operador humano identificado (P1, P5)', NEW.divergencia_id;
+  END IF;
+  IF NEW.ator_tipo <> 'HUMANO' OR NEW.ator_ref IS NULL THEN
+    RAISE EXCEPTION 'saida de congelamento exige ator humano identificado (P1, P5)';
+  END IF;
+
+  -- Reconciliar uma divergência não destranca o contrato se ainda houver outra
+  -- aberta: o congelamento acompanha o contrato, não o incidente.
+  SELECT count(*) INTO v_abertas
+    FROM ops.divergencia d
+   WHERE d.contrato_id = NEW.contrato_id
+     AND d.estado IN ('ABERTA','EM_RECONCILIACAO');
+  IF v_abertas > 0 THEN
+    RAISE EXCEPTION 'contrato tem % divergencia(s) ainda aberta(s) (P1)', v_abertas;
+  END IF;
+
   RETURN NEW;
 END
 $$;

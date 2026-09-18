@@ -7,15 +7,42 @@
     "contrato.rascunho-criado": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["contrato_id", "produtor_ref", "commodity", "quantidade_sacas", "valor_face"],
+      "required": [
+        "contrato_id",
+        "produtor_ref",
+        "commodity",
+        "quantidade_sacas",
+        "valor_face"
+      ],
       "properties": {
-        "contrato_id": { "type": "string", "format": "uuid" },
-        "produtor_ref": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
-        "commodity": { "enum": ["CAFE_ARABICA", "CAFE_CONILON"] },
-        "quantidade_sacas": { "type": "string" },
-        "safra": { "type": "string", "pattern": "^[0-9]{4}/[0-9]{4}$" },
-        "valor_face": { "type": "string" },
-        "vencimento": { "type": "string", "format": "date" }
+        "contrato_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "produtor_ref": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "commodity": {
+          "enum": [
+            "CAFE_ARABICA",
+            "CAFE_CONILON"
+          ]
+        },
+        "quantidade_sacas": {
+          "type": "string"
+        },
+        "safra": {
+          "type": "string",
+          "pattern": "^[0-9]{4}/[0-9]{4}$"
+        },
+        "valor_face": {
+          "type": "string"
+        },
+        "vencimento": {
+          "type": "string",
+          "format": "date"
+        }
       },
       "examples": [
         {
@@ -32,13 +59,32 @@
     "contrato.registrado": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["contrato_id", "registro_entidade", "registro_hash_ancora", "registrado_em"],
+      "required": [
+        "contrato_id",
+        "registro_entidade",
+        "registro_hash_ancora",
+        "registrado_em"
+      ],
       "properties": {
-        "contrato_id": { "type": "string", "format": "uuid" },
-        "registro_entidade": { "type": "string" },
-        "registro_hash_ancora": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" },
-        "registro_documento_hash": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" },
-        "registrado_em": { "type": "string", "format": "date-time" }
+        "contrato_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "registro_entidade": {
+          "type": "string"
+        },
+        "registro_hash_ancora": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "registro_documento_hash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "registrado_em": {
+          "type": "string",
+          "format": "date-time"
+        }
       },
       "examples": [
         {
@@ -53,14 +99,35 @@
     "contrato.espelhado": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["contrato_id", "chain_id", "contrato_addr", "token_id", "tx"],
+      "required": [
+        "contrato_id",
+        "chain_id",
+        "contrato_addr",
+        "token_id",
+        "tx"
+      ],
       "properties": {
-        "contrato_id": { "type": "string", "format": "uuid" },
-        "chain_id": { "type": "integer" },
-        "contrato_addr": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
-        "token_id": { "type": "string" },
-        "slot": { "type": "string" },
-        "tx": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" }
+        "contrato_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "chain_id": {
+          "type": "integer"
+        },
+        "contrato_addr": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "token_id": {
+          "type": "string"
+        },
+        "slot": {
+          "type": "string"
+        },
+        "tx": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        }
       },
       "examples": [
         {
@@ -76,32 +143,97 @@
     "contrato.transicionado": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["contrato_id", "de", "para", "guarda"],
+      "required": [
+        "contrato_id",
+        "de",
+        "para",
+        "guarda"
+      ],
       "properties": {
-        "contrato_id": { "type": "string", "format": "uuid" },
-        "de": { "type": ["string", "null"] },
-        "para": { "type": "string" },
-        "guarda": { "type": "string" }
+        "contrato_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "de": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "para": {
+          "type": "string"
+        },
+        "guarda": {
+          "type": "string"
+        }
       },
       "examples": [
-        { "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001", "de": "ESPELHADO", "para": "ATIVO", "guarda": "conciliacao_inicial_conforme" }
+        {
+          "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
+          "de": "ESPELHADO",
+          "para": "ATIVO",
+          "guarda": "conciliacao_inicial_conforme"
+        }
       ]
     },
     "conciliacao.divergencia-detectada": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["divergencia_id", "tipo", "severidade", "detectada_em"],
+      "required": [
+        "divergencia_id",
+        "tipo",
+        "severidade",
+        "detectada_em"
+      ],
       "properties": {
-        "divergencia_id": { "type": "string", "format": "uuid" },
-        "contrato_id": { "type": ["string", "null"], "format": "uuid" },
-        "tipo": { "type": "string" },
-        "severidade": { "enum": ["INFORMATIVA", "BAIXA", "MEDIA", "ALTA", "CRITICA"] },
-        "campo": { "type": ["string", "null"] },
+        "divergencia_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contrato_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "tipo": {
+          "type": "string"
+        },
+        "severidade": {
+          "enum": [
+            "INFORMATIVA",
+            "BAIXA",
+            "MEDIA",
+            "ALTA",
+            "CRITICA"
+          ]
+        },
+        "campo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "valor_registro": {},
         "valor_onchain": {},
-        "ocorrida_em": { "type": ["string", "null"], "format": "date-time" },
-        "detectada_em": { "type": "string", "format": "date-time" },
-        "latencia_deteccao_ms": { "type": ["integer", "null"] }
+        "ocorrida_em": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "detectada_em": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "latencia_deteccao_ms": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
       },
       "examples": [
         {
@@ -121,12 +253,33 @@
     "conciliacao.contrato-congelado": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["contrato_id", "divergencia_id", "severidade"],
+      "required": [
+        "contrato_id",
+        "divergencia_id",
+        "severidade"
+      ],
       "properties": {
-        "contrato_id": { "type": "string", "format": "uuid" },
-        "divergencia_id": { "type": "string", "format": "uuid" },
-        "severidade": { "enum": ["ALTA", "CRITICA"] },
-        "tx_congelamento": { "type": ["string", "null"], "pattern": "^0x[0-9a-f]{64}$" }
+        "contrato_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "divergencia_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "severidade": {
+          "enum": [
+            "ALTA",
+            "CRITICA"
+          ]
+        },
+        "tx_congelamento": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^0x[0-9a-f]{64}$"
+        }
       },
       "examples": [
         {
@@ -140,12 +293,31 @@
     "conciliacao.divergencia-reconciliada": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["divergencia_id", "decisao", "operador", "justificativa_hash"],
+      "required": [
+        "divergencia_id",
+        "decisao",
+        "operador",
+        "justificativa_hash"
+      ],
       "properties": {
-        "divergencia_id": { "type": "string", "format": "uuid" },
-        "decisao": { "enum": ["ACEITAR_REGISTRO", "MARCAR_FALSO_POSITIVO"] },
-        "operador": { "type": "string", "description": "Identificador funcional do humano. Nunca nome nem e-mail (P2)." },
-        "justificativa_hash": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" }
+        "divergencia_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "decisao": {
+          "enum": [
+            "ACEITAR_REGISTRO",
+            "MARCAR_FALSO_POSITIVO"
+          ]
+        },
+        "operador": {
+          "type": "string",
+          "description": "Identificador funcional do humano. Nunca nome nem e-mail (P2)."
+        },
+        "justificativa_hash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        }
       },
       "examples": [
         {
@@ -159,17 +331,63 @@
     "oraculo.leitura-efetivada": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["leitura_id", "tipo", "chave", "estado", "fontes_usadas", "fontes_independentes", "hash_linhagem"],
+      "required": [
+        "leitura_id",
+        "tipo",
+        "chave",
+        "estado",
+        "fontes_usadas",
+        "fontes_independentes",
+        "hash_linhagem"
+      ],
       "properties": {
-        "leitura_id": { "type": "string", "format": "uuid" },
-        "tipo": { "enum": ["PRECO", "GEOESPACIAL", "FISCAL", "CLIMATICO", "PAGAMENTO", "REGISTRO"] },
-        "chave": { "type": "string" },
-        "valor": { "type": ["string", "null"] },
-        "estado": { "enum": ["EFETIVA", "DEGRADADA"] },
-        "fontes_usadas": { "type": "integer", "minimum": 1 },
-        "fontes_independentes": { "type": "integer", "minimum": 2 },
-        "dispersao_pct": { "type": ["number", "null"] },
-        "hash_linhagem": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" }
+        "leitura_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "tipo": {
+          "enum": [
+            "PRECO",
+            "GEOESPACIAL",
+            "FISCAL",
+            "CLIMATICO",
+            "PAGAMENTO",
+            "REGISTRO"
+          ]
+        },
+        "chave": {
+          "type": "string"
+        },
+        "valor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "estado": {
+          "enum": [
+            "EFETIVA",
+            "DEGRADADA"
+          ]
+        },
+        "fontes_usadas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "fontes_independentes": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "dispersao_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "hash_linhagem": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        }
       },
       "examples": [
         {
@@ -188,28 +406,72 @@
     "oraculo.quorum-perdido": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["tipo", "chave", "fontes_ativas", "fontes_exigidas"],
+      "required": [
+        "tipo",
+        "chave",
+        "fontes_ativas",
+        "fontes_exigidas"
+      ],
       "properties": {
-        "tipo": { "type": "string" },
-        "chave": { "type": "string" },
-        "fontes_ativas": { "type": "integer" },
-        "fontes_exigidas": { "type": "integer" },
-        "decisoes_suspensas": { "type": "array", "items": { "type": "string", "format": "uuid" } }
+        "tipo": {
+          "type": "string"
+        },
+        "chave": {
+          "type": "string"
+        },
+        "fontes_ativas": {
+          "type": "integer"
+        },
+        "fontes_exigidas": {
+          "type": "integer"
+        },
+        "decisoes_suspensas": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
       },
       "examples": [
-        { "tipo": "PRECO", "chave": "CAFE_ARABICA/BRL-SACA", "fontes_ativas": 1, "fontes_exigidas": 2, "decisoes_suspensas": [] }
+        {
+          "tipo": "PRECO",
+          "chave": "CAFE_ARABICA/BRL-SACA",
+          "fontes_ativas": 1,
+          "fontes_exigidas": 2,
+          "decisoes_suspensas": []
+        }
       ]
     },
     "oraculo.disputa-aberta": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["disputa_id", "leitura_id", "prazo_ate"],
+      "required": [
+        "disputa_id",
+        "leitura_id",
+        "prazo_ate"
+      ],
       "properties": {
-        "disputa_id": { "type": "string", "format": "uuid" },
-        "leitura_id": { "type": "string", "format": "uuid" },
-        "aberta_por_ref": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
-        "fundamento_hash": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" },
-        "prazo_ate": { "type": "string", "format": "date-time" }
+        "disputa_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "leitura_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "aberta_por_ref": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "fundamento_hash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "prazo_ate": {
+          "type": "string",
+          "format": "date-time"
+        }
       },
       "examples": [
         {
@@ -224,14 +486,33 @@
     "mercado.marcacao-atualizada": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["contrato_id", "leitura_id", "valor_mtm", "ltv_pct"],
+      "required": [
+        "contrato_id",
+        "leitura_id",
+        "valor_mtm",
+        "ltv_pct"
+      ],
       "properties": {
-        "contrato_id": { "type": "string", "format": "uuid" },
-        "leitura_id": { "type": "string", "format": "uuid" },
-        "preco_saca": { "type": "string" },
-        "haircut_pct": { "type": "number" },
-        "valor_mtm": { "type": "string" },
-        "ltv_pct": { "type": "number" }
+        "contrato_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "leitura_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "preco_saca": {
+          "type": "string"
+        },
+        "haircut_pct": {
+          "type": "number"
+        },
+        "valor_mtm": {
+          "type": "string"
+        },
+        "ltv_pct": {
+          "type": "number"
+        }
       },
       "examples": [
         {
@@ -247,24 +528,61 @@
     "eudr.evidencia-gerada": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["evidencia_id", "talhao_id", "resultado", "hash_evidencia", "bases"],
+      "required": [
+        "evidencia_id",
+        "talhao_id",
+        "resultado",
+        "hash_evidencia",
+        "bases"
+      ],
       "properties": {
-        "evidencia_id": { "type": "string", "format": "uuid" },
-        "talhao_id": { "type": "string", "format": "uuid" },
-        "poligono_hash": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" },
-        "resultado": { "enum": ["CONFORME", "NAO_CONFORME", "LIMITROFE", "INCONCLUSIVO"] },
-        "area_sobreposta_ha": { "type": "number" },
-        "hash_evidencia": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" },
+        "evidencia_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "talhao_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "poligono_hash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "resultado": {
+          "enum": [
+            "CONFORME",
+            "NAO_CONFORME",
+            "LIMITROFE",
+            "INCONCLUSIVO"
+          ]
+        },
+        "area_sobreposta_ha": {
+          "type": "number"
+        },
+        "hash_evidencia": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
         "bases": {
           "type": "array",
           "minItems": 2,
           "items": {
             "type": "object",
-            "required": ["codigo", "versao", "resultado"],
+            "required": [
+              "codigo",
+              "versao",
+              "resultado"
+            ],
             "properties": {
-              "codigo": { "type": "string" },
-              "versao": { "type": "string" },
-              "resultado": { "type": "string" }
+              "codigo": {
+                "type": "string"
+              },
+              "versao": {
+                "type": "string"
+              },
+              "resultado": {
+                "type": "string"
+              }
             }
           },
           "description": "Duas bases no mínimo: conformidade não se apura por fonte única (P4)."
@@ -279,8 +597,16 @@
           "area_sobreposta_ha": 0,
           "hash_evidencia": "0x8888888888888888888888888888888888888888888888888888888888888888",
           "bases": [
-            { "codigo": "PRODES", "versao": "2025", "resultado": "CONFORME" },
-            { "codigo": "MAPBIOMAS_ALERTA", "versao": "2025.1", "resultado": "CONFORME" }
+            {
+              "codigo": "PRODES",
+              "versao": "2025",
+              "resultado": "CONFORME"
+            },
+            {
+              "codigo": "MAPBIOMAS_ALERTA",
+              "versao": "2025.1",
+              "resultado": "CONFORME"
+            }
           ]
         }
       ]
@@ -288,20 +614,44 @@
     "eudr.dds-emitida": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["dds_id", "contrato_id", "numero", "hash_dds"],
+      "required": [
+        "dds_id",
+        "contrato_id",
+        "numero",
+        "hash_dds"
+      ],
       "properties": {
-        "dds_id": { "type": "string", "format": "uuid" },
-        "contrato_id": { "type": "string", "format": "uuid" },
-        "numero": { "type": "string" },
-        "evidencias": { "type": "array", "items": { "type": "string", "format": "uuid" } },
-        "hash_dds": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" }
+        "dds_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contrato_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "numero": {
+          "type": "string"
+        },
+        "evidencias": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "hash_dds": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        }
       },
       "examples": [
         {
           "dds_id": "9f1d2c4a-7777-4a2b-8c3d-000000000007",
           "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
           "numero": "DDS-2026-000123",
-          "evidencias": ["7f1d2c4a-5555-4a2b-8c3d-000000000005"],
+          "evidencias": [
+            "7f1d2c4a-5555-4a2b-8c3d-000000000005"
+          ],
           "hash_dds": "0x9999999999999999999999999999999999999999999999999999999999999999"
         }
       ]
@@ -309,14 +659,37 @@
     "garantia.vinculada": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["garantia_id", "contrato_id", "tipo", "nivel_waterfall", "valor_declarado"],
+      "required": [
+        "garantia_id",
+        "contrato_id",
+        "tipo",
+        "nivel_waterfall",
+        "valor_declarado"
+      ],
       "properties": {
-        "garantia_id": { "type": "string", "format": "uuid" },
-        "contrato_id": { "type": "string", "format": "uuid" },
-        "tipo": { "type": "string" },
-        "nivel_waterfall": { "type": "integer", "minimum": 1, "maximum": 5 },
-        "valor_declarado": { "type": "string" },
-        "garantia_ref": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" }
+        "garantia_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contrato_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "tipo": {
+          "type": "string"
+        },
+        "nivel_waterfall": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "valor_declarado": {
+          "type": "string"
+        },
+        "garantia_ref": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        }
       },
       "examples": [
         {
@@ -332,13 +705,34 @@
     "garantia.excussao-registrada": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["garantia_id", "estado", "recuperado"],
+      "required": [
+        "garantia_id",
+        "estado",
+        "recuperado"
+      ],
       "properties": {
-        "garantia_id": { "type": "string", "format": "uuid" },
-        "estado": { "enum": ["NOTIFICADA", "EM_EXCUSSAO", "EXCUTIDA", "FRUSTRADA"] },
-        "recuperado": { "type": "string" },
-        "dias_desde_acionamento": { "type": "integer" },
-        "evidencia_hash": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" }
+        "garantia_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "estado": {
+          "enum": [
+            "NOTIFICADA",
+            "EM_EXCUSSAO",
+            "EXCUTIDA",
+            "FRUSTRADA"
+          ]
+        },
+        "recuperado": {
+          "type": "string"
+        },
+        "dias_desde_acionamento": {
+          "type": "integer"
+        },
+        "evidencia_hash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        }
       },
       "examples": [
         {
@@ -353,12 +747,30 @@
     "contrato.liquidado": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["contrato_id", "leitura_pagamento_id", "baixa_registro_ref"],
+      "required": [
+        "contrato_id",
+        "leitura_pagamento_id",
+        "baixa_registro_ref"
+      ],
       "properties": {
-        "contrato_id": { "type": "string", "format": "uuid" },
-        "leitura_pagamento_id": { "type": "string", "format": "uuid" },
-        "baixa_registro_ref": { "type": "string" },
-        "tx_baixa": { "type": ["string", "null"], "pattern": "^0x[0-9a-f]{64}$" }
+        "contrato_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "leitura_pagamento_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "baixa_registro_ref": {
+          "type": "string"
+        },
+        "tx_baixa": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^0x[0-9a-f]{64}$"
+        }
       },
       "examples": [
         {
@@ -372,20 +784,43 @@
     "privacidade.titular-eliminado": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["titular_ref", "chave_destruida_em", "retencao_obrigatoria"],
+      "required": [
+        "titular_ref",
+        "chave_destruida_em",
+        "retencao_obrigatoria"
+      ],
       "properties": {
-        "titular_ref": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
-        "chave_destruida_em": { "type": "string", "format": "date-time" },
-        "comprovante_kms": { "type": "string" },
+        "titular_ref": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "chave_destruida_em": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "comprovante_kms": {
+          "type": "string"
+        },
         "retencao_obrigatoria": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["categoria", "fundamento", "ate"],
+            "required": [
+              "categoria",
+              "fundamento",
+              "ate"
+            ],
             "properties": {
-              "categoria": { "type": "string" },
-              "fundamento": { "type": "string" },
-              "ate": { "type": "string", "format": "date" }
+              "categoria": {
+                "type": "string"
+              },
+              "fundamento": {
+                "type": "string"
+              },
+              "ate": {
+                "type": "string",
+                "format": "date"
+              }
             }
           }
         }
@@ -396,7 +831,11 @@
           "chave_destruida_em": "2026-09-18T15:00:00Z",
           "comprovante_kms": "kms-destroy-8f12",
           "retencao_obrigatoria": [
-            { "categoria": "REGISTROS_CONTRATUAIS", "fundamento": "LGPD art. 16, I", "ate": "2032-07-31" }
+            {
+              "categoria": "REGISTROS_CONTRATUAIS",
+              "fundamento": "LGPD art. 16, I",
+              "ate": "2032-07-31"
+            }
           ]
         }
       ]
@@ -404,13 +843,44 @@
     "plataforma.incidente-aberto": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["incidente_id", "origem_incidente", "severidade"],
+      "required": [
+        "incidente_id",
+        "origem_incidente",
+        "severidade"
+      ],
       "properties": {
-        "incidente_id": { "type": "string", "format": "uuid" },
-        "origem_incidente": { "enum": ["CONCILIACAO", "ORACULO", "EUDR", "PLATAFORMA"] },
-        "severidade": { "enum": ["INFORMATIVA", "BAIXA", "MEDIA", "ALTA", "CRITICA"] },
-        "contrato_id": { "type": ["string", "null"], "format": "uuid" },
-        "titulo_hash": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" }
+        "incidente_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "origem_incidente": {
+          "enum": [
+            "CONCILIACAO",
+            "ORACULO",
+            "EUDR",
+            "PLATAFORMA"
+          ]
+        },
+        "severidade": {
+          "enum": [
+            "INFORMATIVA",
+            "BAIXA",
+            "MEDIA",
+            "ALTA",
+            "CRITICA"
+          ]
+        },
+        "contrato_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "titulo_hash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        }
       },
       "examples": [
         {
@@ -419,6 +889,246 @@
           "severidade": "CRITICA",
           "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
           "titulo_hash": "0xdddd111122223333444455556666777788889999aaaabbbbccccddddeeeeffff"
+        }
+      ]
+    },
+    "contrato.titularidade-alterada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contrato_id",
+        "token_id",
+        "de_ref",
+        "para_ref",
+        "tx",
+        "cessao_registrada"
+      ],
+      "properties": {
+        "contrato_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "token_id": {
+          "type": "string"
+        },
+        "de_ref": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "para_ref": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "valor": {
+          "type": "string"
+        },
+        "tx": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "cessao_registrada": {
+          "type": "boolean",
+          "description": "Falso dispara TRANSFERENCIA_SEM_CESSAO na conciliação."
+        }
+      },
+      "examples": [
+        {
+          "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
+          "token_id": "1",
+          "de_ref": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "para_ref": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "valor": "250.0000",
+          "tx": "0xabababababababababababababababababababababababababababababababab",
+          "cessao_registrada": false
+        }
+      ]
+    },
+    "eudr.selo-revogado": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "talhao_id",
+        "evidencia_anterior",
+        "evidencia_nova",
+        "resultado_anterior",
+        "resultado_novo"
+      ],
+      "properties": {
+        "talhao_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "evidencia_anterior": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "evidencia_nova": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "resultado_anterior": {
+          "enum": [
+            "CONFORME",
+            "NAO_CONFORME",
+            "LIMITROFE",
+            "INCONCLUSIVO"
+          ]
+        },
+        "resultado_novo": {
+          "enum": [
+            "CONFORME",
+            "NAO_CONFORME",
+            "LIMITROFE",
+            "INCONCLUSIVO"
+          ]
+        },
+        "contratos_afetados": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "examples": [
+        {
+          "talhao_id": "8f1d2c4a-6666-4a2b-8c3d-000000000006",
+          "evidencia_anterior": "7f1d2c4a-5555-4a2b-8c3d-000000000005",
+          "evidencia_nova": "7f1d2c4a-5555-4a2b-8c3d-00000000000b",
+          "resultado_anterior": "CONFORME",
+          "resultado_novo": "NAO_CONFORME",
+          "contratos_afetados": [
+            "3f1d2c4a-1111-4a2b-8c3d-000000000001"
+          ]
+        }
+      ]
+    },
+    "eudr.dds-revogada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dds_id",
+        "contrato_id",
+        "motivo"
+      ],
+      "properties": {
+        "dds_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contrato_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "motivo": {
+          "enum": [
+            "EVIDENCIA_REVOGADA",
+            "POLIGONO_ALTERADO",
+            "ERRO_DE_EMISSAO",
+            "DETERMINACAO_EXTERNA"
+          ]
+        },
+        "substituida_por": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      },
+      "examples": [
+        {
+          "dds_id": "9f1d2c4a-7777-4a2b-8c3d-000000000007",
+          "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
+          "motivo": "EVIDENCIA_REVOGADA",
+          "substituida_por": null
+        }
+      ]
+    },
+    "compliance.participante-desabilitado": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "participante_ref",
+        "motivo"
+      ],
+      "properties": {
+        "participante_ref": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "motivo": {
+          "enum": [
+            "KYC_EXPIRADO",
+            "LISTA_RESTRITIVA",
+            "EMBARGO_AMBIENTAL",
+            "TRABALHO_ANALOGO_ESCRAVO",
+            "PEDIDO_DO_TITULAR",
+            "DETERMINACAO_EXTERNA"
+          ]
+        },
+        "contratos_afetados": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "examples": [
+        {
+          "participante_ref": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "motivo": "EMBARGO_AMBIENTAL",
+          "contratos_afetados": []
+        }
+      ]
+    },
+    "credor.reacao-registrada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contrato_id",
+        "credor_ref",
+        "acao"
+      ],
+      "properties": {
+        "contrato_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "credor_ref": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "acao": {
+          "enum": [
+            "VISUALIZOU",
+            "SOLICITOU_EVIDENCIA",
+            "OFERTOU",
+            "RECUSOU",
+            "RETIROU_OFERTA"
+          ]
+        },
+        "taxa_ofertada_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "motivo_recusa": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
+          "credor_ref": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "acao": "RECUSOU",
+          "taxa_ofertada_pct": null,
+          "motivo_recusa": "DIVERGENCIA_ABERTA"
         }
       ]
     }

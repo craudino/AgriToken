@@ -202,9 +202,32 @@ implementação, e não depois.
 ## 8. Decisão humana
 
 - [ ] **Aprovado** — inicia a Fase 1 (prompt da Seção 10.1 do briefing)
-- [ ] **Aprovado com ressalvas** — registrar aqui as condições e os ADRs exigidos antes da Fase 1
+- [x] **Aprovado com ressalvas** — condições registradas abaixo
 - [ ] **Reprovado** — devolve à Fase 0 com lista de correções e nova rodada de G1
 
-Decisor: ____________________ Data: ____________
+**Decisor:** usuário · **Data:** 2026-09-18
 
-Observações:
+**Instrução recebida:** prosseguir com a construção do produto completo,
+executando os agentes em sequência, sem pular etapas.
+
+**Condições aplicadas pelo orquestrador antes da primeira linha de
+implementação** (Fase 0.1, registradas como SMC-001 a SMC-008 em
+`docs/contracts/MUDANCAS.md`):
+
+| Condição | Achado que a origina | Estado |
+|---|---|---|
+| Saída do congelamento exige divergência reconciliada por humano | Red team #2 (reproduzido) | Corrigida; o ataque virou teste e é recusado |
+| Quórum independente exigido também no ramo degradado | E6 A3 e red team #4 (reproduzidos) | Corrigida; o ataque virou teste e é recusado |
+| Verificação de P7 alcança o código-fonte e o texto exibido | E1 A4 e red team #1 | Corrigida; novo `validar:p7` |
+| Divergência no sentido token→registro e eventos de má notícia | E1 A1 e red team #5 | Corrigida; catálogo com 14 tipos e 23 eventos |
+| Timelock com proposta, não concessão imediata | Red team #3 | Corrigida na interface e na ABI |
+| Oponibilidade da garantia real | E1 A5 | Corrigida; nível 1 e 2 exigem averbação |
+| Instrumentação de custo e reação de credor | E6 A1 | Corrigida; `ops.custo_verificacao` e `ops.reacao_credor` |
+| ADRs de perímetro, premissas da registradora e tensão P1×P7 | E1 A3, E6 A2, red team #3 | ADR-0005, 0006, 0007 e 0008 |
+
+**O que a decisão não resolve, e segue aberto:** o risco residual declarado no
+ADR-0005 (a restrição estrutural reduz a probabilidade de requalificação, não a
+elimina) e a tensão do ADR-0007 (a plataforma continua sendo quem aperta o
+botão do congelamento, com poder limitado e datado, não inexistente). E1
+reprovou G1 por achados que agora estão corrigidos; **não houve nova rodada de
+parecer**, e este dossiê não afirma que E1 aprovaria o estado atual.
