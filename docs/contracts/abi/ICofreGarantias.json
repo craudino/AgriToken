@@ -1,0 +1,398 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "EspelhoCongelado",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "garantiaRef",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "tokenIdExistente",
+        "type": "uint256"
+      }
+    ],
+    "name": "GarantiaJaVinculada",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "nivel",
+        "type": "uint8"
+      }
+    ],
+    "name": "NivelInvalido",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "politicaHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "PoliticaInexistente",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "garantiaRef",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "enum ICofreGarantias.EstadoExcussao",
+        "name": "estado",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "recuperado",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "evidenciaHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "ExcussaoRegistrada",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "garantiaRef",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "motivoHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "GarantiaLiberada",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "garantiaRef",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "nivel",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "valor",
+        "type": "uint256"
+      }
+    ],
+    "name": "GarantiaVinculada",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "politicaHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "niveis",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "autor",
+        "type": "address"
+      }
+    ],
+    "name": "PoliticaConfigurada",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "politicaHash",
+        "type": "bytes32"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint8",
+            "name": "nivel",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "rotuloHash",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "uint16",
+            "name": "capBps",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint16",
+            "name": "haircutBps",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint32",
+            "name": "prazoRecuperacaoDias",
+            "type": "uint32"
+          }
+        ],
+        "internalType": "struct ICofreGarantias.Nivel[]",
+        "name": "niveis",
+        "type": "tuple[]"
+      }
+    ],
+    "name": "configurarPolitica",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "garantiaRef",
+        "type": "bytes32"
+      }
+    ],
+    "name": "estadoDaExcussao",
+    "outputs": [
+      {
+        "internalType": "enum ICofreGarantias.EstadoExcussao",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "garantiasDo",
+    "outputs": [
+      {
+        "internalType": "bytes32[]",
+        "name": "",
+        "type": "bytes32[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "garantiaRef",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "motivoHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "liberarGarantia",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "garantiaRef",
+        "type": "bytes32"
+      }
+    ],
+    "name": "nivelDaGarantia",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "perda",
+        "type": "uint256"
+      }
+    ],
+    "name": "percorrerWaterfall",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint8",
+            "name": "nivel",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "absorvido",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "esgotado",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct ICofreGarantias.Absorcao[]",
+        "name": "absorcoes",
+        "type": "tuple[]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "perdaResidual",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "politicaDo",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "politicaHash",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "garantiaRef",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "enum ICofreGarantias.EstadoExcussao",
+        "name": "estado",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "recuperado",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "evidenciaHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "registrarExcussao",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "garantiaRef",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint8",
+        "name": "nivel",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "valor",
+        "type": "uint256"
+      }
+    ],
+    "name": "vincularGarantia",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

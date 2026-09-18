@@ -1,0 +1,171 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
+      },
+      {
+        "internalType": "uint64",
+        "name": "validoAte",
+        "type": "uint64"
+      }
+    ],
+    "name": "AtestacaoExpirada",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
+      }
+    ],
+    "name": "ParticipanteNaoHabilitado",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "motivoHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "ParticipanteDesabilitado",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "atestacaoHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint64",
+        "name": "validoAte",
+        "type": "uint64"
+      }
+    ],
+    "name": "ParticipanteHabilitado",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
+      }
+    ],
+    "name": "atestacaoDe",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "motivoHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "desabilitar",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
+      }
+    ],
+    "name": "estaHabilitado",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
+      }
+    ],
+    "name": "habilitacaoValidaAte",
+    "outputs": [
+      {
+        "internalType": "uint64",
+        "name": "",
+        "type": "uint64"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "conta",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "atestacaoHash",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint64",
+        "name": "validoAte",
+        "type": "uint64"
+      }
+    ],
+    "name": "habilitar",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
