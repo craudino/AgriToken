@@ -13,9 +13,19 @@ investimento".
 
 ## Estado
 
-**Fase 0 concluída — aguardando o portão G1.** Os contratos estão congelados;
-nenhuma implementação foi escrita, por determinação do briefing: se G1
-reprovar, nenhuma linha é escrita.
+**Protótipo ponta a ponta funcionando.** G1 foi executado (E1 reprovou, E6
+aprovou com ressalvas, red team levantou cinco ataques), a decisão humana foi
+prosseguir, os achados foram fechados na Fase 0.1 e os sete agentes
+construíram seus workstreams.
+
+O que está provado e o que não está está em `docs/ESTADO-DO-PROTOTIPO.md` —
+leia isso antes de concluir qualquer coisa a partir da demonstração.
+
+```bash
+npm install
+node infra/orquestrar.mjs subir   # banco, nó EVM, contratos e serviços
+npm run demo                      # demonstração completa, 20 passos
+```
 
 ## Por onde começar
 
@@ -27,6 +37,8 @@ reprovar, nenhuma linha é escrita.
 | Consumir uma API | `docs/contracts/openapi/README.md` |
 | Entender o modelo de dados | `docs/contracts/db/README.md` |
 | Ver o que o painel disse | `docs/panel/` |
+| Saber o que está provado | `docs/ESTADO-DO-PROTOTIPO.md` |
+| Rodar a demonstração | `npm run demo` |
 
 ## Verificação
 
@@ -35,10 +47,11 @@ npm install
 npm run validar
 ```
 
-Quatro validadores, todos correspondendo a princípios arquiteturais: recusam
-PII em esquema, evento ou ABI; recusam leitura contratual de fonte única;
-recusam função de custódia ou novação nos contratos; recusam divergência entre
-a especificação congelada e o que foi implementado.
+Sete validadores, todos correspondendo a princípios arquiteturais: recusam PII
+em esquema, evento, ABI ou cadeia; recusam leitura contratual de fonte única;
+recusam função de custódia ou novação nos contratos e nos serviços; recusam
+jargão na tela do produtor; e recusam divergência entre a especificação
+congelada e o que foi implementado.
 
 ## Licença
 
