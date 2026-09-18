@@ -22,3 +22,6 @@ coverage.json
 infra/enderecos.json
 .env
 .run/
+.next/
+next-env.d.ts
+apps/web/.next/

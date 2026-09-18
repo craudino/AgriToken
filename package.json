@@ -9,7 +9,7 @@
     "validar:eventos": "node infra/ci/validar-eventos.mjs",
     "validar:esquema": "bash infra/ci/validar-esquema.sh",
     "validar:contratos": "node infra/ci/validar-abis.mjs",
-    "validar": "npm run validar:openapi && npm run validar:eventos && npm run validar:contratos && npm run validar:tipos && npm run validar:p7 && npm run validar:esquema",
+    "validar": "npm run validar:openapi && npm run validar:eventos && npm run validar:contratos && npm run validar:tipos && npm run validar:p7 && npm run validar:web && npm run validar:esquema",
     "validar:p7": "node infra/ci/validar-p7.mjs",
     "construir": "tsc -b packages/nucleo services/compliance services/oracle services/core services/eudr infra/simulador-registradora",
     "bd:subir": "bash infra/db/subir-local.sh",
@@ -18,13 +18,18 @@
     "dev": "node infra/orquestrar.mjs",
     "demo": "node infra/demo/executar.mjs",
     "validar:pii-cadeia": "node infra/ci/varrer-pii-cadeia.mjs",
-    "validar:tipos": "node infra/ci/gerar-tipos.mjs"
+    "validar:tipos": "node infra/ci/gerar-tipos.mjs",
+    "validar:web": "node apps/web/test/sem-jargao.mjs",
+    "web:build": "next build apps/web",
+    "web:dev": "next dev apps/web -p 3000"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.8",
     "@redocly/cli": "^1.25.11",
     "@types/node": "^22.10.2",
     "@types/pg": "^8.11.10",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "ethers": "^6.13.4",
@@ -41,10 +46,13 @@
     "infra/simulador-registradora"
   ],
   "dependencies": {
-    "@nestjs/common": "^10.4.15",
-    "@nestjs/core": "^10.4.15",
-    "@nestjs/platform-fastify": "^10.4.15",
+    "@nestjs/common": "^11.1.18",
+    "@nestjs/core": "^11.1.18",
+    "@nestjs/platform-fastify": "^11.1.18",
+    "next": "^15.5.25",
     "pg": "^8.13.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   }

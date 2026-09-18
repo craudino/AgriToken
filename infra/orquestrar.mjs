@@ -23,6 +23,7 @@ const SERVICOS = [
   { nome: 'oracle', cmd: ['node', 'services/oracle/dist/main.js'], porta: 3002 },
   { nome: 'eudr', cmd: ['node', 'services/eudr/dist/main.js'], porta: 3004 },
   { nome: 'core', cmd: ['node', 'services/core/dist/main.js'], porta: 3003 },
+  { nome: 'web', cmd: ['npx', 'next', 'start', 'apps/web', '-p', '3000'], porta: 3000 },
 ];
 
 const pidfile = (n) => join(RUN, `${n}.pid`);
