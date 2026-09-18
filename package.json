@@ -2,21 +2,23 @@
   "name": "cpr-digital",
   "version": "0.1.0",
   "private": true,
-  "description": "MVP CPR Digital — raiz do monorepo. Ferramental de validação dos contratos congelados da Fase 0.",
+  "description": "MVP CPR Digital \u2014 raiz do monorepo. Ferramental de valida\u00e7\u00e3o dos contratos congelados da Fase 0.",
   "type": "module",
   "scripts": {
     "validar:openapi": "redocly lint --config infra/ci/redocly.yaml && node infra/ci/validar-openapi.mjs",
     "validar:eventos": "node infra/ci/validar-eventos.mjs",
     "validar:esquema": "bash infra/ci/validar-esquema.sh",
     "validar:contratos": "node infra/ci/validar-abis.mjs",
-    "validar": "npm run validar:openapi && npm run validar:eventos && npm run validar:contratos && npm run validar:p7 && npm run validar:esquema",
+    "validar": "npm run validar:openapi && npm run validar:eventos && npm run validar:contratos && npm run validar:tipos && npm run validar:p7 && npm run validar:esquema",
     "validar:p7": "node infra/ci/validar-p7.mjs",
     "construir": "tsc -b packages/nucleo services/compliance services/oracle services/core services/eudr infra/simulador-registradora",
     "bd:subir": "bash infra/db/subir-local.sh",
     "bd:aplicar": "bash infra/db/aplicar.sh",
     "bd:semear": "node --experimental-strip-types infra/dados/semear.ts",
     "dev": "node infra/orquestrar.mjs",
-    "demo": "node infra/demo/executar.mjs"
+    "demo": "node infra/demo/executar.mjs",
+    "validar:pii-cadeia": "node infra/ci/varrer-pii-cadeia.mjs",
+    "validar:tipos": "node infra/ci/gerar-tipos.mjs"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.8",

@@ -20,3 +20,4 @@ artifacts/
 coverage/
 coverage.json
 infra/enderecos.json
+.env
