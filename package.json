@@ -19,12 +19,16 @@
     "demo": "node infra/demo/executar.mjs"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
     "@redocly/cli": "^1.25.11",
     "@types/node": "^22.10.2",
     "@types/pg": "^8.11.10",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "ethers": "^6.13.4",
+    "hardhat": "^2.22.17",
     "solc": "0.8.28",
+    "solidity-coverage": "^0.8.14",
     "typescript": "^5.7.2",
     "yaml": "^2.6.1"
   },
