@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cpr.digital/esquemas/registro-auditoria.json",
+  "title": "Registro de auditoria",
+  "description": "Forma canônica do que é gravado em cpr_audit.registro. Difere do envelope de evento em dois pontos deliberados: é encadeado por hash, de modo que a supressão de um registro seja detectável, e vive em base física separada, para que o comprometimento da base operacional não permita reescrever a história (P5).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["seq", "id", "tipo", "sujeito_tipo", "sujeito_id", "origem", "ocorrido_em", "registrado_em", "payload", "hash_anterior", "hash"],
+  "properties": {
+    "seq": { "type": "integer", "minimum": 1, "description": "Posição na cadeia. Lacuna na sequência é sinal de supressão." },
+    "id": { "type": "string", "format": "uuid" },
+    "tipo": { "type": "string", "pattern": "^[a-z]+(\\.[a-z-]+)+$" },
+    "versao": { "type": "integer", "minimum": 1, "default": 1 },
+    "sujeito_tipo": { "enum": ["CONTRATO", "PRODUTOR", "TALHAO", "LEITURA", "GARANTIA", "DDS", "TITULAR", "PLATAFORMA"] },
+    "sujeito_id": { "type": "string", "description": "Sempre identificador opaco (P2)." },
+    "ator_ref": { "type": ["string", "null"], "description": "Pseudônimo. O painel de auditoria resolve para pessoa apenas mediante autorização registrada." },
+    "origem": { "type": "string", "pattern": "^[a-z0-9/_-]+@[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "ocorrido_em": { "type": "string", "format": "date-time" },
+    "registrado_em": { "type": "string", "format": "date-time" },
+    "payload": { "type": "object" },
+    "evidencia": { "type": "array", "items": { "$ref": "https://cpr.digital/esquemas/evento/envelope.json#/$defs/evidencia" } },
+    "hash_anterior": { "type": "string", "pattern": "^0x[0-9a-f]{64}$", "description": "Hash do registro anterior. O primeiro usa 32 bytes nulos." },
+    "hash": {
+      "type": "string",
+      "pattern": "^0x[0-9a-f]{64}$",
+      "description": "sha256(hash_anterior || id || tipo || sujeito_tipo:sujeito_id || ocorrido_em em UTC || payload canônico). A fórmula está implementada em audit.fn_encadeia e verificável por audit.verifica_cadeia."
+    },
+    "assinatura": { "type": ["string", "null"] }
+  }
+}

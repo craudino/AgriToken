@@ -1,0 +1,426 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cpr.digital/esquemas/evento/payloads.json",
+  "title": "Payloads por tipo de evento",
+  "description": "Um $def por tipo do catálogo. Nenhum payload admite campo identificante: o que atravessa o barramento é referência opaca, hash e valor (P2).",
+  "$defs": {
+    "contrato.rascunho-criado": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contrato_id", "produtor_ref", "commodity", "quantidade_sacas", "valor_face"],
+      "properties": {
+        "contrato_id": { "type": "string", "format": "uuid" },
+        "produtor_ref": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+        "commodity": { "enum": ["CAFE_ARABICA", "CAFE_CONILON"] },
+        "quantidade_sacas": { "type": "string" },
+        "safra": { "type": "string", "pattern": "^[0-9]{4}/[0-9]{4}$" },
+        "valor_face": { "type": "string" },
+        "vencimento": { "type": "string", "format": "date" }
+      },
+      "examples": [
+        {
+          "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
+          "produtor_ref": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "commodity": "CAFE_ARABICA",
+          "quantidade_sacas": "500.0000",
+          "safra": "2026/2027",
+          "valor_face": "750000.00",
+          "vencimento": "2027-07-31"
+        }
+      ]
+    },
+    "contrato.registrado": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contrato_id", "registro_entidade", "registro_hash_ancora", "registrado_em"],
+      "properties": {
+        "contrato_id": { "type": "string", "format": "uuid" },
+        "registro_entidade": { "type": "string" },
+        "registro_hash_ancora": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" },
+        "registro_documento_hash": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" },
+        "registrado_em": { "type": "string", "format": "date-time" }
+      },
+      "examples": [
+        {
+          "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
+          "registro_entidade": "REG-SIM",
+          "registro_hash_ancora": "0x9f2b7c1d0e3a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+          "registro_documento_hash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+          "registrado_em": "2026-09-18T12:00:00Z"
+        }
+      ]
+    },
+    "contrato.espelhado": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contrato_id", "chain_id", "contrato_addr", "token_id", "tx"],
+      "properties": {
+        "contrato_id": { "type": "string", "format": "uuid" },
+        "chain_id": { "type": "integer" },
+        "contrato_addr": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+        "token_id": { "type": "string" },
+        "slot": { "type": "string" },
+        "tx": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" }
+      },
+      "examples": [
+        {
+          "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
+          "chain_id": 1337,
+          "contrato_addr": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "token_id": "1",
+          "slot": "1",
+          "tx": "0x2222222222222222222222222222222222222222222222222222222222222222"
+        }
+      ]
+    },
+    "contrato.transicionado": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contrato_id", "de", "para", "guarda"],
+      "properties": {
+        "contrato_id": { "type": "string", "format": "uuid" },
+        "de": { "type": ["string", "null"] },
+        "para": { "type": "string" },
+        "guarda": { "type": "string" }
+      },
+      "examples": [
+        { "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001", "de": "ESPELHADO", "para": "ATIVO", "guarda": "conciliacao_inicial_conforme" }
+      ]
+    },
+    "conciliacao.divergencia-detectada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["divergencia_id", "tipo", "severidade", "detectada_em"],
+      "properties": {
+        "divergencia_id": { "type": "string", "format": "uuid" },
+        "contrato_id": { "type": ["string", "null"], "format": "uuid" },
+        "tipo": { "type": "string" },
+        "severidade": { "enum": ["INFORMATIVA", "BAIXA", "MEDIA", "ALTA", "CRITICA"] },
+        "campo": { "type": ["string", "null"] },
+        "valor_registro": {},
+        "valor_onchain": {},
+        "ocorrida_em": { "type": ["string", "null"], "format": "date-time" },
+        "detectada_em": { "type": "string", "format": "date-time" },
+        "latencia_deteccao_ms": { "type": ["integer", "null"] }
+      },
+      "examples": [
+        {
+          "divergencia_id": "4f1d2c4a-2222-4a2b-8c3d-000000000002",
+          "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
+          "tipo": "VALOR_FACE_ALTERADO",
+          "severidade": "CRITICA",
+          "campo": "valor_face",
+          "valor_registro": "700000.00",
+          "valor_onchain": "750000.00",
+          "ocorrida_em": "2026-09-18T13:00:00Z",
+          "detectada_em": "2026-09-18T13:04:12Z",
+          "latencia_deteccao_ms": 252000
+        }
+      ]
+    },
+    "conciliacao.contrato-congelado": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contrato_id", "divergencia_id", "severidade"],
+      "properties": {
+        "contrato_id": { "type": "string", "format": "uuid" },
+        "divergencia_id": { "type": "string", "format": "uuid" },
+        "severidade": { "enum": ["ALTA", "CRITICA"] },
+        "tx_congelamento": { "type": ["string", "null"], "pattern": "^0x[0-9a-f]{64}$" }
+      },
+      "examples": [
+        {
+          "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
+          "divergencia_id": "4f1d2c4a-2222-4a2b-8c3d-000000000002",
+          "severidade": "CRITICA",
+          "tx_congelamento": "0x3333333333333333333333333333333333333333333333333333333333333333"
+        }
+      ]
+    },
+    "conciliacao.divergencia-reconciliada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["divergencia_id", "decisao", "operador", "justificativa_hash"],
+      "properties": {
+        "divergencia_id": { "type": "string", "format": "uuid" },
+        "decisao": { "enum": ["ACEITAR_REGISTRO", "MARCAR_FALSO_POSITIVO"] },
+        "operador": { "type": "string", "description": "Identificador funcional do humano. Nunca nome nem e-mail (P2)." },
+        "justificativa_hash": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" }
+      },
+      "examples": [
+        {
+          "divergencia_id": "4f1d2c4a-2222-4a2b-8c3d-000000000002",
+          "decisao": "ACEITAR_REGISTRO",
+          "operador": "OP-CONCILIACAO-07",
+          "justificativa_hash": "0x4444444444444444444444444444444444444444444444444444444444444444"
+        }
+      ]
+    },
+    "oraculo.leitura-efetivada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["leitura_id", "tipo", "chave", "estado", "fontes_usadas", "fontes_independentes", "hash_linhagem"],
+      "properties": {
+        "leitura_id": { "type": "string", "format": "uuid" },
+        "tipo": { "enum": ["PRECO", "GEOESPACIAL", "FISCAL", "CLIMATICO", "PAGAMENTO", "REGISTRO"] },
+        "chave": { "type": "string" },
+        "valor": { "type": ["string", "null"] },
+        "estado": { "enum": ["EFETIVA", "DEGRADADA"] },
+        "fontes_usadas": { "type": "integer", "minimum": 1 },
+        "fontes_independentes": { "type": "integer", "minimum": 2 },
+        "dispersao_pct": { "type": ["number", "null"] },
+        "hash_linhagem": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" }
+      },
+      "examples": [
+        {
+          "leitura_id": "5f1d2c4a-3333-4a2b-8c3d-000000000003",
+          "tipo": "PRECO",
+          "chave": "CAFE_ARABICA/BRL-SACA",
+          "valor": "1480.00",
+          "estado": "EFETIVA",
+          "fontes_usadas": 3,
+          "fontes_independentes": 2,
+          "dispersao_pct": 0.8,
+          "hash_linhagem": "0x5555555555555555555555555555555555555555555555555555555555555555"
+        }
+      ]
+    },
+    "oraculo.quorum-perdido": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tipo", "chave", "fontes_ativas", "fontes_exigidas"],
+      "properties": {
+        "tipo": { "type": "string" },
+        "chave": { "type": "string" },
+        "fontes_ativas": { "type": "integer" },
+        "fontes_exigidas": { "type": "integer" },
+        "decisoes_suspensas": { "type": "array", "items": { "type": "string", "format": "uuid" } }
+      },
+      "examples": [
+        { "tipo": "PRECO", "chave": "CAFE_ARABICA/BRL-SACA", "fontes_ativas": 1, "fontes_exigidas": 2, "decisoes_suspensas": [] }
+      ]
+    },
+    "oraculo.disputa-aberta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["disputa_id", "leitura_id", "prazo_ate"],
+      "properties": {
+        "disputa_id": { "type": "string", "format": "uuid" },
+        "leitura_id": { "type": "string", "format": "uuid" },
+        "aberta_por_ref": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+        "fundamento_hash": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" },
+        "prazo_ate": { "type": "string", "format": "date-time" }
+      },
+      "examples": [
+        {
+          "disputa_id": "6f1d2c4a-4444-4a2b-8c3d-000000000004",
+          "leitura_id": "5f1d2c4a-3333-4a2b-8c3d-000000000003",
+          "aberta_por_ref": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "fundamento_hash": "0x6666666666666666666666666666666666666666666666666666666666666666",
+          "prazo_ate": "2026-09-25T12:00:00Z"
+        }
+      ]
+    },
+    "mercado.marcacao-atualizada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contrato_id", "leitura_id", "valor_mtm", "ltv_pct"],
+      "properties": {
+        "contrato_id": { "type": "string", "format": "uuid" },
+        "leitura_id": { "type": "string", "format": "uuid" },
+        "preco_saca": { "type": "string" },
+        "haircut_pct": { "type": "number" },
+        "valor_mtm": { "type": "string" },
+        "ltv_pct": { "type": "number" }
+      },
+      "examples": [
+        {
+          "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
+          "leitura_id": "5f1d2c4a-3333-4a2b-8c3d-000000000003",
+          "preco_saca": "1480.00",
+          "haircut_pct": 20,
+          "valor_mtm": "592000.00",
+          "ltv_pct": 126.7
+        }
+      ]
+    },
+    "eudr.evidencia-gerada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidencia_id", "talhao_id", "resultado", "hash_evidencia", "bases"],
+      "properties": {
+        "evidencia_id": { "type": "string", "format": "uuid" },
+        "talhao_id": { "type": "string", "format": "uuid" },
+        "poligono_hash": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" },
+        "resultado": { "enum": ["CONFORME", "NAO_CONFORME", "LIMITROFE", "INCONCLUSIVO"] },
+        "area_sobreposta_ha": { "type": "number" },
+        "hash_evidencia": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" },
+        "bases": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["codigo", "versao", "resultado"],
+            "properties": {
+              "codigo": { "type": "string" },
+              "versao": { "type": "string" },
+              "resultado": { "type": "string" }
+            }
+          },
+          "description": "Duas bases no mínimo: conformidade não se apura por fonte única (P4)."
+        }
+      },
+      "examples": [
+        {
+          "evidencia_id": "7f1d2c4a-5555-4a2b-8c3d-000000000005",
+          "talhao_id": "8f1d2c4a-6666-4a2b-8c3d-000000000006",
+          "poligono_hash": "0x7777777777777777777777777777777777777777777777777777777777777777",
+          "resultado": "CONFORME",
+          "area_sobreposta_ha": 0,
+          "hash_evidencia": "0x8888888888888888888888888888888888888888888888888888888888888888",
+          "bases": [
+            { "codigo": "PRODES", "versao": "2025", "resultado": "CONFORME" },
+            { "codigo": "MAPBIOMAS_ALERTA", "versao": "2025.1", "resultado": "CONFORME" }
+          ]
+        }
+      ]
+    },
+    "eudr.dds-emitida": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dds_id", "contrato_id", "numero", "hash_dds"],
+      "properties": {
+        "dds_id": { "type": "string", "format": "uuid" },
+        "contrato_id": { "type": "string", "format": "uuid" },
+        "numero": { "type": "string" },
+        "evidencias": { "type": "array", "items": { "type": "string", "format": "uuid" } },
+        "hash_dds": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" }
+      },
+      "examples": [
+        {
+          "dds_id": "9f1d2c4a-7777-4a2b-8c3d-000000000007",
+          "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
+          "numero": "DDS-2026-000123",
+          "evidencias": ["7f1d2c4a-5555-4a2b-8c3d-000000000005"],
+          "hash_dds": "0x9999999999999999999999999999999999999999999999999999999999999999"
+        }
+      ]
+    },
+    "garantia.vinculada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["garantia_id", "contrato_id", "tipo", "nivel_waterfall", "valor_declarado"],
+      "properties": {
+        "garantia_id": { "type": "string", "format": "uuid" },
+        "contrato_id": { "type": "string", "format": "uuid" },
+        "tipo": { "type": "string" },
+        "nivel_waterfall": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "valor_declarado": { "type": "string" },
+        "garantia_ref": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" }
+      },
+      "examples": [
+        {
+          "garantia_id": "af1d2c4a-8888-4a2b-8c3d-000000000008",
+          "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
+          "tipo": "PENHOR_SAFRA",
+          "nivel_waterfall": 1,
+          "valor_declarado": "400000.00",
+          "garantia_ref": "0xaaaabbbbccccddddeeeeffff0000111122223333444455556666777788889999"
+        }
+      ]
+    },
+    "garantia.excussao-registrada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["garantia_id", "estado", "recuperado"],
+      "properties": {
+        "garantia_id": { "type": "string", "format": "uuid" },
+        "estado": { "enum": ["NOTIFICADA", "EM_EXCUSSAO", "EXCUTIDA", "FRUSTRADA"] },
+        "recuperado": { "type": "string" },
+        "dias_desde_acionamento": { "type": "integer" },
+        "evidencia_hash": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" }
+      },
+      "examples": [
+        {
+          "garantia_id": "af1d2c4a-8888-4a2b-8c3d-000000000008",
+          "estado": "EXCUTIDA",
+          "recuperado": "310000.00",
+          "dias_desde_acionamento": 240,
+          "evidencia_hash": "0xbbbb111122223333444455556666777788889999aaaabbbbccccddddeeeeffff"
+        }
+      ]
+    },
+    "contrato.liquidado": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contrato_id", "leitura_pagamento_id", "baixa_registro_ref"],
+      "properties": {
+        "contrato_id": { "type": "string", "format": "uuid" },
+        "leitura_pagamento_id": { "type": "string", "format": "uuid" },
+        "baixa_registro_ref": { "type": "string" },
+        "tx_baixa": { "type": ["string", "null"], "pattern": "^0x[0-9a-f]{64}$" }
+      },
+      "examples": [
+        {
+          "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
+          "leitura_pagamento_id": "bf1d2c4a-9999-4a2b-8c3d-000000000009",
+          "baixa_registro_ref": "BAIXA-REG-SIM-0001",
+          "tx_baixa": "0xcccc111122223333444455556666777788889999aaaabbbbccccddddeeeeffff"
+        }
+      ]
+    },
+    "privacidade.titular-eliminado": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["titular_ref", "chave_destruida_em", "retencao_obrigatoria"],
+      "properties": {
+        "titular_ref": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+        "chave_destruida_em": { "type": "string", "format": "date-time" },
+        "comprovante_kms": { "type": "string" },
+        "retencao_obrigatoria": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["categoria", "fundamento", "ate"],
+            "properties": {
+              "categoria": { "type": "string" },
+              "fundamento": { "type": "string" },
+              "ate": { "type": "string", "format": "date" }
+            }
+          }
+        }
+      },
+      "examples": [
+        {
+          "titular_ref": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "chave_destruida_em": "2026-09-18T15:00:00Z",
+          "comprovante_kms": "kms-destroy-8f12",
+          "retencao_obrigatoria": [
+            { "categoria": "REGISTROS_CONTRATUAIS", "fundamento": "LGPD art. 16, I", "ate": "2032-07-31" }
+          ]
+        }
+      ]
+    },
+    "plataforma.incidente-aberto": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["incidente_id", "origem_incidente", "severidade"],
+      "properties": {
+        "incidente_id": { "type": "string", "format": "uuid" },
+        "origem_incidente": { "enum": ["CONCILIACAO", "ORACULO", "EUDR", "PLATAFORMA"] },
+        "severidade": { "enum": ["INFORMATIVA", "BAIXA", "MEDIA", "ALTA", "CRITICA"] },
+        "contrato_id": { "type": ["string", "null"], "format": "uuid" },
+        "titulo_hash": { "type": "string", "pattern": "^0x[0-9a-f]{64}$" }
+      },
+      "examples": [
+        {
+          "incidente_id": "cf1d2c4a-aaaa-4a2b-8c3d-00000000000a",
+          "origem_incidente": "CONCILIACAO",
+          "severidade": "CRITICA",
+          "contrato_id": "3f1d2c4a-1111-4a2b-8c3d-000000000001",
+          "titulo_hash": "0xdddd111122223333444455556666777788889999aaaabbbbccccddddeeeeffff"
+        }
+      ]
+    }
+  }
+}
