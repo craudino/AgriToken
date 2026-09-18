@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
-  poolOps, emTransacao, publicar, hashPayload, canonico, Contexto, log, comCusto, semQuorum, invalido,
-} from '@cpr/nucleo';
+  poolOps, emTransacao, publicar, hashPayload, canonico, Contexto, log, comCusto, semQuorum, invalido, chamar, chamarJson } from '@cpr/nucleo';
 
 const URL_ORACLE = process.env.URL_ORACLE ?? 'http://127.0.0.1:3002';
 
@@ -84,17 +83,17 @@ export class EudrService {
                      area_sobreposta_ha: Number(area.toFixed(4)),
                      margem_ha: Number(margemHa.toFixed(4)), resolucao_m: r?.resolucao_m ?? null });
 
-      await fetch(`${URL_ORACLE}/sim/geo`, {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ chave, fonte: b.codigo === 'MAPBIOMAS' ? 'MAPBIOMAS' : 'PRODES',
-                               resultado: { resultado, area_sobreposta_ha: Number(area.toFixed(4)) } }),
+      await chamar(`${URL_ORACLE}/leituras/fonte`, {
+        servico: 'services/eudr', metodo: 'POST', correlacaoId: ctx.correlacaoId,
+        corpo: { tipo: 'GEOESPACIAL', chave, fonte: b.codigo === 'MAPBIOMAS' ? 'MAPBIOMAS' : 'PRODES',
+                 resultado: { resultado, area_sobreposta_ha: Number(area.toFixed(4)) } },
       });
     }
 
-    const leitura = await fetch(`${URL_ORACLE}/leituras/coletar`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ tipo: 'GEOESPACIAL', chave }),
-    }).then((r) => r.json() as Promise<{ id: string; estado: string; valorJson: { resultado: string } }>);
+    const leitura = await chamarJson<{ id: string; estado: string; valorJson: { resultado: string } }>(
+      `${URL_ORACLE}/leituras/coletar`,
+      { servico: 'services/eudr', metodo: 'POST', correlacaoId: ctx.correlacaoId,
+        corpo: { tipo: 'GEOESPACIAL', chave } });
 
     if (leitura.estado !== 'EFETIVA') {
       throw semQuorum('GEOESPACIAL', `quórum de bases não atingido (estado ${leitura.estado})`);

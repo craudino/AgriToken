@@ -7,5 +7,8 @@ export * from './auditoria';
 export * from './eventos';
 export * from './custo';
 export * from './cadeia';
+export * from './auth';
+export * from './guarda';
+export * from './cliente';
 export * from './tipos';
 export * from './catalogo-eventos';

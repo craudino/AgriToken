@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Headers, HttpException, Param, Post, Query } from '@nestjs/common';
-import { poolOps, versaoServico, Contexto, ProblemaCpr } from '@cpr/nucleo';
+import { poolOps, versaoServico, Contexto, ProblemaCpr , Escopos, Publica } from '@cpr/nucleo';
 import { GeoService } from './geo.service';
 import { EudrService } from './eudr.service';
 
@@ -15,17 +15,21 @@ const tratar = (e: unknown): never => {
 export class AppController {
   constructor(private readonly geo: GeoService, private readonly eudr: EudrService) {}
 
+  @Publica()
   @Get('/saude')
   saude() { return { servico: 'eudr', ok: true }; }
 
+  @Escopos('simulador:operar')
   @Post('/sim/bases/carregar')
   carregar(@Headers('x-correlacao-id') cid: string) { return this.geo.carregarBases(ctxDe(cid)); }
 
+  @Escopos('geo:ingerir')
   @Post('/talhoes')
   async ingerir(@Headers('x-correlacao-id') cid: string, @Body() corpo: Record<string, any>) {
     try { return await this.geo.ingerir(ctxDe(cid), corpo as never); } catch (e) { return tratar(e); }
   }
 
+  @Escopos('contrato:ler')
   @Get('/talhoes/:id')
   async talhao(@Param('id') id: string) {
     const t = await this.geo.metadados(id);
@@ -34,6 +38,7 @@ export class AppController {
   }
 
   /** Geometria bruta exige finalidade declarada, e o acesso fica registrado (P2). */
+  @Escopos('geo:bruto')
   @Get('/talhoes/:id/geometria')
   async geometria(@Param('id') id: string, @Query('finalidade') finalidade?: string) {
     if (!finalidade) {
@@ -45,16 +50,19 @@ export class AppController {
     return g;
   }
 
+  @Escopos('geo:avaliar')
   @Post('/talhoes/:id/avaliacoes')
   async avaliar(@Headers('x-correlacao-id') cid: string, @Param('id') id: string) {
     try { return await this.eudr.avaliar(ctxDe(cid), id); } catch (e) { return tratar(e); }
   }
 
+  @Escopos('geo:avaliar')
   @Post('/talhoes/:id/reavaliacoes')
   async reavaliar(@Headers('x-correlacao-id') cid: string, @Param('id') id: string) {
     try { return await this.eudr.reavaliar(ctxDe(cid), id); } catch (e) { return tratar(e); }
   }
 
+  @Escopos('contrato:ler')
   @Get('/evidencias/:id')
   async evidencia(@Param('id') id: string) {
     const e = await this.eudr.obter(id);
@@ -62,6 +70,7 @@ export class AppController {
     return e;
   }
 
+  @Escopos('auditoria:ler')
   @Post('/evidencias/:id/reproducao')
   async reproduzir(@Param('id') id: string) {
     const r = await this.eudr.reproduzir(id);
@@ -69,6 +78,7 @@ export class AppController {
     return r;
   }
 
+  @Escopos('dds:emitir')
   @Post('/dds')
   async dds(@Headers('x-correlacao-id') cid: string,
             @Body() corpo: { contrato_id: string; evidencias: string[]; operador_ref: string }) {
@@ -76,6 +86,7 @@ export class AppController {
     catch (e) { return tratar(e); }
   }
 
+  @Escopos('contrato:ler')
   @Get('/bases')
   async bases() {
     const { rows } = await poolOps().query(
@@ -85,6 +96,7 @@ export class AppController {
   }
 
   /** Placar de custo do selo por hectare — a lacuna F4 (SMC-007). */
+  @Escopos('auditoria:ler')
   @Get('/placar/custo-selo')
   async placarCusto() {
     const { rows } = await poolOps().query(

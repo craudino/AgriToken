@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Headers, HttpException, Param, Post, Query, Res } from '@nestjs/common';
-import { poolOps, versaoServico, Contexto, ProblemaCpr, verificarCadeia } from '@cpr/nucleo';
+import { poolOps, versaoServico, Contexto, ProblemaCpr, verificarCadeia , Escopos, Publica } from '@cpr/nucleo';
 import { OriginacaoService, RascunhoEntrada } from './originacao.service';
 import { ConciliacaoService } from './conciliacao.service';
 import { MercadoService } from './mercado.service';
@@ -25,10 +25,12 @@ export class AppController {
     private readonly liquidacao: LiquidacaoService,
   ) {}
 
+  @Publica()
   @Get('/saude')
   saude() { return { servico: 'core', ok: true }; }
 
   // ------------------------------------------------------------- contratos
+  @Escopos('contrato:ler')
   @Get('/contratos')
   async listar(@Query('estado') estado?: string, @Query('situacao_conciliacao') sit?: string) {
     const { rows } = await poolOps().query(
@@ -42,6 +44,7 @@ export class AppController {
     return { itens: rows, proximo_cursor: null };
   }
 
+  @Escopos('contrato:ler')
   @Get('/contratos/:id')
   async obter(@Param('id') id: string, @Res({ passthrough: true }) res: { header: (k: string, v: string) => void }) {
     const { rows } = await poolOps().query(
@@ -60,22 +63,26 @@ export class AppController {
     };
   }
 
+  @Escopos('contrato:escrever')
   @Post('/contratos')
   async criar(@Headers('x-correlacao-id') cid: string, @Body() corpo: RascunhoEntrada) {
     try { return await this.originacao.criarRascunho(ctxDe(cid), corpo); } catch (e) { return tratar(e); }
   }
 
+  @Escopos('contrato:escrever')
   @Post('/contratos/:id/verificacao')
   async verificar(@Headers('x-correlacao-id') cid: string, @Param('id') id: string) {
     await this.originacao.enviarParaVerificacao(ctxDe(cid), id);
     return { contrato_id: id, estado: 'EM_VERIFICACAO' };
   }
 
+  @Escopos('contrato:escrever')
   @Post('/contratos/:id/registro')
   async registrar(@Headers('x-correlacao-id') cid: string, @Param('id') id: string) {
     try { return await this.originacao.registrar(ctxDe(cid), id); } catch (e) { return tratar(e); }
   }
 
+  @Escopos('contrato:escrever')
   @Post('/contratos/:id/espelho')
   async espelhar(
     @Headers('x-correlacao-id') cid: string, @Param('id') id: string,
@@ -88,11 +95,13 @@ export class AppController {
   }
 
   // ----------------------------------------------------------- conciliação
+  @Escopos('conciliacao:executar')
   @Post('/conciliacao/executar')
   async conciliar(@Headers('x-correlacao-id') cid: string, @Body() corpo: { contrato_id?: string }) {
     return this.conciliacao.executar(ctxDe(cid), corpo?.contrato_id ? 'CONTRATO' : 'COMPLETA', corpo?.contrato_id);
   }
 
+  @Escopos('contrato:ler')
   @Get('/contratos/:id/conciliacao')
   async situacaoConciliacao(@Param('id') id: string) {
     const { rows: c } = await poolOps().query(
@@ -107,6 +116,7 @@ export class AppController {
     return { situacao: c[0].situacao_conciliacao, ultima_execucao_em: e[0].ultima, divergencias: d };
   }
 
+  @Escopos('contrato:ler')
   @Get('/conciliacao/divergencias')
   async divergencias(@Query('estado') estado?: string, @Query('severidade') sev?: string) {
     const { rows } = await poolOps().query(
@@ -116,6 +126,7 @@ export class AppController {
     return rows;
   }
 
+  @Escopos('conciliacao:reconciliar')
   @Post('/conciliacao/divergencias/:id/reconciliacao')
   async reconciliar(
     @Headers('x-correlacao-id') cid: string, @Param('id') id: string,
@@ -133,6 +144,7 @@ export class AppController {
     } catch (e) { return tratar(e); }
   }
 
+  @Escopos('conciliacao:executar')
   @Post('/conciliacao/divergencias/:id/congelar-onchain')
   async congelarOnchain(@Headers('x-correlacao-id') cid: string, @Param('id') id: string) {
     const { rows } = await poolOps().query('SELECT contrato_id FROM ops.divergencia WHERE id = $1', [id]);
@@ -141,6 +153,7 @@ export class AppController {
   }
 
   /** Placar da lacuna nº 1: injetadas, detectadas e latência por tipo. */
+  @Escopos('auditoria:ler')
   @Get('/placar/conciliacao')
   async placar() {
     const { rows } = await poolOps().query(
@@ -154,12 +167,14 @@ export class AppController {
   }
 
   // -------------------------------------------------------- mercado e risco
+  @Escopos('contrato:escrever')
   @Post('/contratos/:id/marcacao')
   async marcar(@Headers('x-correlacao-id') cid: string, @Param('id') id: string,
                @Body() corpo: { haircut_pct?: number }) {
     try { return await this.mercado.marcar(ctxDe(cid), id, corpo?.haircut_pct ?? 20); } catch (e) { return tratar(e); }
   }
 
+  @Escopos('contrato:ler')
   @Get('/contratos/:id/garantias')
   async garantias(@Param('id') id: string) {
     const { rows } = await poolOps().query(
@@ -169,6 +184,7 @@ export class AppController {
     return rows;
   }
 
+  @Escopos('contrato:escrever')
   @Post('/contratos/:id/garantias')
   async vincularGarantia(@Param('id') id: string, @Body() corpo: Record<string, unknown>) {
     const { rows } = await poolOps().query(
@@ -181,18 +197,21 @@ export class AppController {
     return { id: rows[0].id };
   }
 
+  @Escopos('contrato:ler')
   @Post('/simulacoes/waterfall')
   async simular(@Headers('x-correlacao-id') cid: string, @Body() corpo: Record<string, any>) {
     try { return await this.waterfall.simular(ctxDe(cid), corpo as never); } catch (e) { return tratar(e); }
   }
 
   // -------------------------------------------------------------- liquidação
+  @Escopos('contrato:escrever')
   @Post('/contratos/:id/liquidacao')
   async liquidar(@Headers('x-correlacao-id') cid: string, @Param('id') id: string,
                  @Body() corpo: { baixa_registro_ref: string }) {
     try { return await this.liquidacao.liquidar(ctxDe(cid), id, corpo.baixa_registro_ref); } catch (e) { return tratar(e); }
   }
 
+  @Escopos('contrato:escrever')
   @Post('/contratos/:id/inadimplencia')
   async inadimplir(@Headers('x-correlacao-id') cid: string, @Param('id') id: string,
                    @Body() corpo: { gatilho: string; leituras?: string[] }) {
@@ -202,6 +221,7 @@ export class AppController {
 
   // --------------------------------------------------------------- auditoria
   /** O que se sabia, quando e com base em quê (P5). Alimenta o painel de W6. */
+  @Escopos('auditoria:ler')
   @Get('/contratos/:id/trilha')
   async trilha(@Param('id') id: string, @Query('ate') ate?: string) {
     const { rows } = await poolOps().query(
@@ -212,9 +232,11 @@ export class AppController {
     return rows;
   }
 
+  @Escopos('auditoria:ler')
   @Get('/auditoria/cadeia')
   async cadeia() { return verificarCadeia(); }
 
+  @Escopos('auditoria:ler')
   @Get('/reacoes')
   async listarReacoes(@Query('contrato_id') contratoId?: string) {
     const { rows } = await poolOps().query(
@@ -226,6 +248,7 @@ export class AppController {
   }
 
   /** F7: reação revelada do credor. Painel bonito não mede disposição a pagar. */
+  @Escopos('contrato:ler')
   @Post('/reacoes')
   async registrarReacao(@Body() corpo: Record<string, unknown>) {
     await poolOps().query(

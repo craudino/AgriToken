@@ -18,12 +18,7 @@ const ORACLE = 'http://127.0.0.1:3002';
 const EUDR = 'http://127.0.0.1:3004';
 const REG = 'http://127.0.0.1:3005';
 
-const J = (r) => r.json();
-const post = (u, b) => fetch(u, {
-  method: 'POST', headers: { 'content-type': 'application/json', 'x-correlacao-id': crypto.randomUUID() },
-  body: JSON.stringify(b ?? {}),
-}).then(J);
-const get = (u) => fetch(u).then(J);
+import { post, get, registrarComoEmitente } from './cliente.mjs';
 
 const enderecos = JSON.parse(readFileSync('infra/enderecos.json', 'utf8'));
 const massa = JSON.parse(readFileSync('infra/dados/massa.json', 'utf8'));
@@ -103,9 +98,21 @@ for (const g of [
 ]) await post(`${CORE}/contratos/${contrato.id}/garantias`, g);
 
 await post(`${CORE}/contratos/${contrato.id}/verificacao`, {});
+
+// O emitente registra na entidade autorizada — não a plataforma.
+await registrarComoEmitente(REG, {
+  registro_id: contrato.registro_id, produtor_ref: produtor.produtor_ref,
+  quantidade_sacas: '500', valor_face: '750000.00', vencimento: '2027-07-31',
+}, [{ tipo: 'PENHOR_SAFRA', referencia: 'AVERB-DEMO', valor: { valor: '400000.00', moeda: 'BRL' } },
+    { tipo: 'SEGURO_AGRICOLA', referencia: 'APOLICE-DEMO', valor: { valor: '180000.00', moeda: 'BRL' } },
+    { tipo: 'AVAL', referencia: 'AVAL-DEMO', valor: { valor: '120000.00', moeda: 'BRL' } },
+    { tipo: 'FUNDO_MUTUALIZADO', referencia: 'FUNDO-DEMO', valor: { valor: '90000.00', moeda: 'BRL' } },
+    { tipo: 'HIPOTECA', referencia: 'MATR-DEMO', valor: { valor: '600000.00', moeda: 'BRL' } }]);
+
 const registrado = await post(`${CORE}/contratos/${contrato.id}/registro`, {});
-etapa('Título registrado na entidade autorizada',
-  `${contrato.registro_id}, hash do conteúdo ${registrado.conteudo_hash.slice(0, 18)}…`);
+etapa('Registro confirmado por leitura, não por escrita',
+  `${contrato.registro_id}, hash do conteúdo ${registrado.conteudo_hash.slice(0, 18)}… — ` +
+  'a plataforma lê o registro; quem registra é o emitente (P1)');
 
 const espelho = await post(`${CORE}/contratos/${contrato.id}/espelho`, {});
 const espelhoRepetido = await post(`${CORE}/contratos/${contrato.id}/espelho`, {});

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { poolOps, emTransacao, publicar, Contexto, log, semQuorum, ProblemaCpr } from '@cpr/nucleo';
+import { poolOps, emTransacao, publicar, Contexto, log, semQuorum, ProblemaCpr, chamar, chamarJson } from '@cpr/nucleo';
 
 const URL_ORACLE = process.env.URL_ORACLE ?? 'http://127.0.0.1:3002';
 
@@ -18,7 +18,8 @@ export class MercadoService {
     if (!rows.length) throw new Error('contrato inexistente');
     const c = rows[0];
 
-    const r = await fetch(`${URL_ORACLE}/leituras/efetiva?tipo=PRECO&chave=${c.commodity}/BRL-SACA`);
+    const r = await chamar(`${URL_ORACLE}/leituras/efetiva?tipo=PRECO&chave=${c.commodity}/BRL-SACA`,
+      { servico: 'services/core', correlacaoId: ctx.correlacaoId });
     if (!r.ok) throw semQuorum('PRECO', 'sem leitura vigente para marcação a mercado');
     const leitura = await r.json() as {
       id: string; valor_numerico: string; idade_segundos: number;

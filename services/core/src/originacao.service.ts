@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   poolOps, emTransacao, publicar, hashPayload, sha256Hex, canonico, Contexto, log,
-  ProblemaCpr, invalido, congelado, ancoraEmUso, comCusto,
-} from '@cpr/nucleo';
+  ProblemaCpr, invalido, congelado, ancoraEmUso, comCusto, chamar, chamarJson } from '@cpr/nucleo';
 import { Cadeia, ancoraDe, hashDe } from '@cpr/nucleo';
 
 const URL_COMPLIANCE = process.env.URL_COMPLIANCE ?? 'http://127.0.0.1:3001';
@@ -30,7 +29,8 @@ export class OriginacaoService {
    * atestação — o núcleo nunca vê o dossiê que a sustenta.
    */
   async criarRascunho(ctx: Contexto, e: RascunhoEntrada) {
-    const r = await fetch(`${URL_COMPLIANCE}/produtores/${e.produtor_ref}/situacao`);
+    const r = await chamar(`${URL_COMPLIANCE}/produtores/${e.produtor_ref}/situacao`,
+      { servico: 'services/core', correlacaoId: ctx.correlacaoId });
     if (!r.ok) throw invalido('produtor desconhecido');
     const situacao = await r.json() as { habilitado_a_originar: boolean; situacao: string };
     if (!situacao.habilitado_a_originar) {
@@ -73,7 +73,19 @@ export class OriginacaoService {
     });
   }
 
-  /** Registra o título na entidade autorizada. É o registro que dá eficácia. */
+  /**
+   * Confirma que o título existe no registro e marca o contrato como
+   * REGISTRADO.
+   *
+   * A versão anterior deste método **escrevia** o título na registradora, por
+   * uma rota do simulador. Funcionava e estava errada: quem emite e registra a
+   * CPR é o emitente perante a entidade autorizada; a plataforma observa. Com
+   * a autorização por escopo, o defeito apareceu sozinho — o token de serviço
+   * não tem `simulador:operar`, e não deve ter mesmo.
+   *
+   * O que sobra aqui é leitura e conferência, que é o que P1 descreve: o
+   * registro prevalece, e o espelho só nasce depois que o registro existe.
+   */
   async registrar(ctx: Contexto, contratoId: string) {
     const { rows } = await poolOps().query(
       `SELECT c.*, p.ref_opaca FROM ops.contrato c JOIN ops.produtor p ON p.id = c.produtor_id
@@ -81,38 +93,37 @@ export class OriginacaoService {
     if (!rows.length) throw invalido('contrato inexistente');
     const c0 = rows[0];
 
-    const garantias = await poolOps().query(
-      `SELECT tipo, registro_publico_ref, valor_declarado FROM ops.garantia
-        WHERE contrato_id = $1 AND liberada_em IS NULL`, [contratoId]);
-
-    const titulo = {
-      entidade: c0.registro_entidade,
-      registro_id: c0.registro_id,
-      estado: 'VIGENTE',
-      titular_ref: c0.ref_opaca.toString('hex'),
-      emitente_ref: c0.ref_opaca.toString('hex'),
-      commodity: c0.commodity,
-      quantidade: String(c0.quantidade_sacas),
-      valor_face: { valor: String(c0.valor_face), moeda: 'BRL' },
-      vencimento: new Date(c0.vencimento).toISOString().slice(0, 10),
-      garantias: garantias.rows.map((g: Record<string, unknown>) => ({
-        tipo: g.tipo, referencia: g.registro_publico_ref ?? '',
-        valor: { valor: String(g.valor_declarado), moeda: 'BRL' },
-      })),
-      onus: [], cessoes: [],
-    };
-
     const resposta = await comCusto(poolOps(),
       { etapa: 'REGISTRO_CONSULTA', sujeitoTipo: 'CONTRATO', sujeitoId: contratoId,
         automatica: true, tarifaCentavos: 250, fonte: 'registradora' },
       async () => {
-        const r = await fetch(`${URL_REGISTRADORA}/sim/titulos`, {
-          method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(titulo),
-        });
+        const r = await chamar(
+          `${URL_REGISTRADORA}/titulos/${c0.registro_entidade}/${c0.registro_id}`,
+          { servico: 'services/core', correlacaoId: ctx.correlacaoId });
+        if (r.status === 404) {
+          throw new ProblemaCpr(409, 'titulo-nao-registrado',
+            'Título ainda não consta no registro',
+            `O contrato ${c0.registro_id} precisa ser registrado pelo emitente na entidade ` +
+            'autorizada antes de ser espelhado. A plataforma não registra por ele (P1).');
+        }
         if (!r.ok) throw new Error(`registradora respondeu ${r.status}`);
-        return r.json() as Promise<{ conteudo_hash: string; atualizado_em: string }>;
+        return r.json() as Promise<{ conteudo_hash: string; estado: string; valor_face: { valor: string }; quantidade: string }>;
       });
+
+    // Conferência do que o registro diz contra o que o contrato afirma. Um
+    // espelho que nasce divergente nasce congelado — e é melhor não nascer.
+    const divergencias: string[] = [];
+    if (resposta.estado !== 'VIGENTE') divergencias.push(`estado no registro é ${resposta.estado}`);
+    if (Number(resposta.valor_face?.valor) !== Number(c0.valor_face)) {
+      divergencias.push(`valor de face ${resposta.valor_face?.valor} no registro contra ${c0.valor_face} no contrato`);
+    }
+    if (Number(resposta.quantidade) !== Number(c0.quantidade_sacas)) {
+      divergencias.push(`quantidade ${resposta.quantidade} no registro contra ${c0.quantidade_sacas} no contrato`);
+    }
+    if (divergencias.length) {
+      throw new ProblemaCpr(409, 'registro-divergente',
+        'Registro diverge do contrato na origem', divergencias.join('; '), 'P1');
+    }
 
     return emTransacao(poolOps(), async (cli) => {
       await cli.query(

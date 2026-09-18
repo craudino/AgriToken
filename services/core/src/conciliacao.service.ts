@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   poolOps, emTransacao, publicar, hashPayload, sha256Hex, canonico, Contexto, log,
-  comCusto, POLITICA_DIVERGENCIA, TipoDivergencia, Severidade,
-} from '@cpr/nucleo';
+  comCusto, POLITICA_DIVERGENCIA, TipoDivergencia, Severidade, chamar, chamarJson } from '@cpr/nucleo';
 import { Cadeia, hashDe } from '@cpr/nucleo';
 
 const URL_REGISTRADORA = process.env.URL_REGISTRADORA ?? 'http://127.0.0.1:3005';
@@ -107,10 +106,10 @@ export class ConciliacaoService {
   /** Lê o registro com quórum (P4) e compara com o estado on-chain. */
   private async conciliarContrato(ctx: Contexto, c: Record<string, any>): Promise<Achado[]> {
     const chave = `${c.registro_entidade}/${c.registro_id}`;
-    const leitura = await fetch(`${URL_ORACLE}/leituras/coletar`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ tipo: 'REGISTRO', chave, url: URL_REGISTRADORA }),
-    }).then((r) => r.json() as Promise<{ estado: string; valorJson: unknown; falhas: Array<{ motivo: string }> }>);
+    const leitura = await chamarJson<{ estado: string; valorJson: unknown; falhas: Array<{ motivo: string }> }>(
+      `${URL_ORACLE}/leituras/coletar`,
+      { servico: 'services/core', metodo: 'POST', correlacaoId: ctx.correlacaoId,
+        corpo: { tipo: 'REGISTRO', chave, url: URL_REGISTRADORA } });
 
     const espelho = this.chain.espelho('conciliador');
     const tokenId = BigInt(c.token_id);
@@ -222,7 +221,8 @@ export class ConciliacaoService {
 
   /** Título registrado sem espelho: o sistema precisa ver a própria ausência. */
   private async detectarRegistrosSemEspelho(ctx: Contexto, execucaoId: string): Promise<number> {
-    const r = await fetch(`${URL_REGISTRADORA}/titulos`).catch(() => null);
+    const r = await chamar(`${URL_REGISTRADORA}/titulos`,
+      { servico: 'services/core', correlacaoId: ctx.correlacaoId }).catch(() => null);
     if (!r?.ok) return 0;
     const { itens } = await r.json() as { itens: Array<Record<string, any>> };
     let n = 0;

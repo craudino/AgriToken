@@ -1,13 +1,28 @@
 // Acesso aos serviços. Tudo do lado do servidor: o navegador não fala com o
-// núcleo nem com o compliance, e nenhuma credencial de serviço chega ao cliente.
+// núcleo nem com o compliance, e nenhuma credencial de serviço chega ao
+// cliente — o token é montado aqui, no servidor, e some antes do HTML sair.
+import { emitirToken, type Escopo } from '@cpr/nucleo/dist/auth.js';
 const CORE = process.env.URL_CORE ?? 'http://127.0.0.1:3003';
 const COMPLIANCE = process.env.URL_COMPLIANCE ?? 'http://127.0.0.1:3001';
 const ORACLE = process.env.URL_ORACLE ?? 'http://127.0.0.1:3002';
 const EUDR = process.env.URL_EUDR ?? 'http://127.0.0.1:3004';
 
+/**
+ * A interface age com o escopo de leitura do credor, não com um token
+ * onipotente: se uma tela passar a precisar de escopo que ela não tem, o erro
+ * aparece no desenvolvimento em vez de um privilégio silencioso em produção.
+ */
+const ESCOPOS_WEB: Escopo[] = ['contrato:ler', 'auditoria:ler', 'oraculo:ler', 'produtor:ler', 'pii:tratamentos'];
+
+const token = () => process.env.CPR_TOKEN_WEB ?? emitirToken({
+  perfil: 'credor', sub: 'apps/web', escopos: ESCOPOS_WEB, ttlSegundos: 900,
+});
+
+const cabecalhos = () => ({ authorization: `Bearer ${token()}`, 'content-type': 'application/json' });
+
 const pegar = async <T>(url: string, padrao: T): Promise<T> => {
   try {
-    const r = await fetch(url, { cache: 'no-store' });
+    const r = await fetch(url, { cache: 'no-store', headers: cabecalhos() });
     if (!r.ok) return padrao;
     return (await r.json()) as T;
   } catch {
@@ -18,7 +33,7 @@ const pegar = async <T>(url: string, padrao: T): Promise<T> => {
 export const postar = async <T>(url: string, corpo: unknown): Promise<T> => {
   const r = await fetch(url, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-correlacao-id': crypto.randomUUID() },
+    headers: { ...cabecalhos(), 'x-correlacao-id': crypto.randomUUID() },
     body: JSON.stringify(corpo),
     cache: 'no-store',
   });

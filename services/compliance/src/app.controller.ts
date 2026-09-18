@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Headers, HttpException, Param, Post, Query } from '@nestjs/common';
-import { poolPii, poolOps, versaoServico, Contexto, log } from '@cpr/nucleo';
+import { poolPii, poolOps, versaoServico, Contexto, log , Escopos, Publica } from '@cpr/nucleo';
 import { Cadeia, sha256Hex } from '@cpr/nucleo';
 import { CofreService, EntradaOnboarding } from './cofre.service';
 import { EliminacaoService } from './eliminacao.service';
@@ -21,6 +21,7 @@ export class AppController {
   private cadeia: Cadeia | null = null;
   private get chain(): Cadeia { return (this.cadeia ??= new Cadeia()); }
 
+  @Publica()
   @Get('/saude')
   saude() { return { servico: 'compliance', ok: true }; }
 
@@ -32,6 +33,7 @@ export class AppController {
    * O que sobe para a cadeia é o hash da atestação e a validade. Nome,
    * documento e dossiê ficam onde estão (P2).
    */
+  @Escopos('participante:habilitar')
   @Post('/participantes/habilitar')
   async habilitar(
     @Headers('x-correlacao-id') cid: string,
@@ -52,6 +54,7 @@ export class AppController {
   }
 
   /** Desabilita e emite o evento de má notícia que faltava (SMC-004). */
+  @Escopos('participante:habilitar')
   @Post('/participantes/desabilitar')
   async desabilitar(@Body() corpo: { endereco: string; motivo: string }) {
     const participantes = this.chain.participantes('compliance');
@@ -61,6 +64,7 @@ export class AppController {
   }
 
   /** Única rota do sistema que aceita dado identificável (P2, ADR-0002). */
+  @Escopos('produtor:onboarding')
   @Post('/onboarding')
   async onboarding(@Headers('x-correlacao-id') cid: string, @Body() corpo: EntradaOnboarding) {
     const ctx = ctxDe(cid);
@@ -73,6 +77,7 @@ export class AppController {
     return { produtor_ref: r.produtor_ref, situacao: r.situacao };
   }
 
+  @Escopos('produtor:ler')
   @Get('/produtores/:ref/situacao')
   async situacao(@Param('ref') ref: string) {
     const s = await this.cofre.situacao(ref);
@@ -80,9 +85,11 @@ export class AppController {
     return s;
   }
 
+  @Escopos('produtor:ler')
   @Get('/produtores/:ref/credenciais')
   listarCredenciais(@Param('ref') ref: string) { return this.credenciais.listar(ref); }
 
+  @Escopos('credencial:emitir')
   @Post('/produtores/:ref/credenciais')
   async emitirCredencial(
     @Headers('x-correlacao-id') cid: string,
@@ -94,11 +101,13 @@ export class AppController {
     return r;
   }
 
+  @Escopos('credencial:verificar')
   @Post('/verificacoes/credencial')
   verificar(@Body() corpo: { vc: { payload: unknown; assinatura: string; emissor: string } }) {
     return this.credenciais.verificar(corpo.vc);
   }
 
+  @Escopos('pii:eliminar')
   @Post('/titulares/:ref/eliminacao')
   async eliminar(
     @Headers('x-correlacao-id') cid: string,
@@ -110,6 +119,7 @@ export class AppController {
     return r;
   }
 
+  @Escopos('pii:eliminar')
   @Get('/titulares/:ref/eliminacao')
   async comprovante(@Param('ref') ref: string) {
     const r = await this.eliminacao.comprovante(ref);
@@ -118,6 +128,7 @@ export class AppController {
   }
 
   /** Registro de operações de tratamento — o que o regulador pede primeiro. */
+  @Escopos('pii:tratamentos')
   @Get('/tratamentos')
   async tratamentos(@Query('produtor_ref') ref?: string, @Query('desde') desde?: string) {
     let titularId: string | null = null;
@@ -138,6 +149,7 @@ export class AppController {
   }
 
   /** Placar de custo de verificação por produtor — a lacuna F1 (SMC-007). */
+  @Escopos('auditoria:ler')
   @Get('/placar/custo-verificacao')
   async placarCusto() {
     const { rows } = await poolOps().query(

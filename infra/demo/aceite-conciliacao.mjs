@@ -13,9 +13,7 @@ const COMPLIANCE = process.env.URL_COMPLIANCE ?? 'http://127.0.0.1:3001';
 const REG = process.env.URL_REGISTRADORA ?? 'http://127.0.0.1:3005';
 const OPS = process.env.OPS_URL ?? 'postgres://cpr_ops_app:dev_ops@127.0.0.1:5440/cpr_ops';
 
-const J = (r) => r.json();
-const post = (u, b) => fetch(u, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b ?? {}) }).then(J);
-const get = (u) => fetch(u).then(J);
+import { post, get, registrarComoEmitente } from './cliente.mjs';
 
 const enderecos = JSON.parse(readFileSync('infra/enderecos.json', 'utf8'));
 const pool = new pg.Pool({ connectionString: OPS });
@@ -67,6 +65,10 @@ const prepararContrato = async (comGarantia = true) => {
     });
   }
   await post(`${CORE}/contratos/${c.id}/verificacao`);
+  await registrarComoEmitente(REG, {
+    registro_id: c.registro_id, produtor_ref: ref,
+    quantidade_sacas: '500', valor_face: '750000.00', vencimento: '2027-07-31',
+  }, comGarantia ? [{ tipo: 'PENHOR_SAFRA', referencia: 'AVERB', valor: { valor: '400000.00', moeda: 'BRL' } }] : []);
   await post(`${CORE}/contratos/${c.id}/registro`);
   await post(`${CORE}/contratos/${c.id}/espelho`);
   await post(`${CORE}/conciliacao/executar`, { contrato_id: c.id });

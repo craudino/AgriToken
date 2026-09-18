@@ -1,3 +1,4 @@
+import { chamar } from '@cpr/nucleo';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -93,7 +94,7 @@ export const lerGeo = async (fonte: string, chave: string): Promise<Leitura> => 
 export const lerRegistro = async (fonte: string, chave: string, url: string): Promise<Leitura> => {
   if (derrubadas.has(fonte)) throw new Error(`fonte ${fonte} indisponível`);
   const t0 = performance.now();
-  const resposta = await fetch(`${url}/titulos/${chave}`);
+  const resposta = await chamar(`${url}/titulos/${chave}`, { servico: 'services/oracle' });
   if (!resposta.ok) throw new Error(`registradora respondeu ${resposta.status}`);
   const corpo = await resposta.json();
   return {

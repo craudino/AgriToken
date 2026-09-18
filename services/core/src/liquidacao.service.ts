@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { poolOps, emTransacao, publicar, Contexto, log, congelado, semQuorum, ProblemaCpr } from '@cpr/nucleo';
+import { poolOps, emTransacao, publicar, Contexto, log, congelado, semQuorum, ProblemaCpr, chamar, chamarJson } from '@cpr/nucleo';
 import { Cadeia, hashDe } from '@cpr/nucleo';
 
 const URL_ORACLE = process.env.URL_ORACLE ?? 'http://127.0.0.1:3002';
@@ -24,10 +24,10 @@ export class LiquidacaoService {
     // Pagamento exige unanimidade de duas fontes independentes: é fato binário,
     // e duas fontes que discordam significam que não se sabe (ADR-0003).
     const chave = `${c.registro_entidade}/${c.registro_id}`;
-    const coleta = await fetch(`${URL_ORACLE}/leituras/coletar`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ tipo: 'PAGAMENTO', chave }),
-    }).then((r) => r.json() as Promise<{ id: string; estado: string; valorJson: { confirmado: boolean } }>);
+    const coleta = await chamarJson<{ id: string; estado: string; valorJson: { confirmado: boolean } }>(
+      `${URL_ORACLE}/leituras/coletar`,
+      { servico: 'services/core', metodo: 'POST', correlacaoId: ctx.correlacaoId,
+        corpo: { tipo: 'PAGAMENTO', chave } });
 
     if (coleta.estado !== 'EFETIVA' || !coleta.valorJson?.confirmado) {
       throw semQuorum('PAGAMENTO', `pagamento não confirmado por quórum (estado ${coleta.estado})`);

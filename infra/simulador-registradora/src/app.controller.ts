@@ -1,5 +1,5 @@
 import { Body, Controller, Get, HttpException, Param, Post, Query } from '@nestjs/common';
-import { poolOps, hashPayload, canonico, TipoDivergencia } from '@cpr/nucleo';
+import { poolOps, hashPayload, canonico, TipoDivergencia , Escopos, Publica } from '@cpr/nucleo';
 import { aplicar, LADO, Titulo } from './injecoes';
 
 /**
@@ -22,9 +22,11 @@ export class AppController {
     if (this.falha.modo === 'CERTIFICADO_INVALIDO') throw new HttpException({ title: 'Falha de TLS', status: 526 }, 526);
   }
 
+  @Publica()
   @Get('/saude')
   saude() { return { servico: 'simulador-registradora', ok: true, falha: this.falha }; }
 
+  @Escopos('registro:ler')
   @Get('/titulos/:entidade/:registroId')
   async titulo(@Param('entidade') entidade: string, @Param('registroId') registroId: string) {
     this.conferirFalha();
@@ -37,6 +39,7 @@ export class AppController {
     return rows[0].conteudo;
   }
 
+  @Escopos('registro:ler')
   @Get('/titulos')
   async alteracoes(@Query('desde') desde?: string) {
     this.conferirFalha();
@@ -48,6 +51,7 @@ export class AppController {
   }
 
   /** Registro de título. É o que a registradora faria; aqui é simulado. */
+  @Escopos('simulador:operar')
   @Post('/sim/titulos')
   async registrar(@Body() corpo: Omit<Titulo, 'conteudo_hash' | 'atualizado_em'>) {
     const conteudo: Titulo = {
@@ -64,6 +68,7 @@ export class AppController {
     return conteudo;
   }
 
+  @Escopos('simulador:operar')
   @Post('/sim/injecoes')
   async injetar(@Body() corpo: {
     tipo: TipoDivergencia; entidade: string; registro_id: string; parametros?: Record<string, unknown>;
@@ -106,6 +111,7 @@ export class AppController {
     };
   }
 
+  @Escopos('simulador:operar')
   @Get('/sim/injecoes/:id')
   async injecao(@Param('id') id: string) {
     const { rows } = await poolOps().query(
@@ -116,6 +122,7 @@ export class AppController {
     return rows[0];
   }
 
+  @Escopos('simulador:operar')
   @Post('/sim/indisponibilidade')
   indisponibilidade(@Body() corpo: { modo: string; duracao_s: number }) {
     this.falha = { modo: corpo.modo, ate: Date.now() + corpo.duracao_s * 1000 };
