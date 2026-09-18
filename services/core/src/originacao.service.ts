@@ -156,10 +156,13 @@ export class OriginacaoService {
       'SELECT * FROM ops.contrato WHERE id = $1', [contratoId]);
     if (!rows.length) throw invalido('contrato inexistente');
     const c0 = rows[0];
-    if (c0.estado !== 'REGISTRADO') throw invalido(`contrato em ${c0.estado}; espelho exige REGISTRADO`);
+    // A idempotência vem antes da checagem de estado: depois de espelhado o
+    // contrato já não está em REGISTRADO, e verificar o estado primeiro faria a
+    // repetição devolver erro em vez do espelho existente (P3).
     if (c0.token_id) {
       return { ja_existia: true, token_id: String(c0.token_id), chain_id: c0.token_chain_id };
     }
+    if (c0.estado !== 'REGISTRADO') throw invalido(`contrato em ${c0.estado}; espelho exige REGISTRADO`);
 
     const ancora = '0x' + c0.registro_hash_ancora.toString('hex');
     const espelho = this.chain.espelho();

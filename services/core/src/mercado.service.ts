@@ -34,7 +34,7 @@ export class MercadoService {
       const { rows: m } = await cli.query<{ id: string }>(
         `INSERT INTO ops.marcacao_mercado (contrato_id, leitura_id, preco_saca, haircut_pct, valor_mtm, ltv_pct)
          VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-        [contratoId, leitura.id, preco.toFixed(2), haircutPct, mtm.toFixed(2), Math.min(ltv, 9999).toFixed(4)]);
+        [contratoId, leitura.id, preco.toFixed(2), haircutPct, mtm.toFixed(2), ltv.toFixed(4)]);
       // A leitura consumida fica amarrada à decisão: sem isso, "de onde veio
       // este número" não tem resposta (P5) — e o gatilho do banco recusa
       // leitura fora do quórum (SMC-002).
@@ -48,7 +48,7 @@ export class MercadoService {
         tipo: 'mercado.marcacao-atualizada', sujeitoTipo: 'CONTRATO', sujeitoId: contratoId,
         payload: {
           contrato_id: contratoId, leitura_id: leitura.id, preco_saca: preco.toFixed(2),
-          haircut_pct: haircutPct, valor_mtm: mtm.toFixed(2), ltv_pct: Number(Math.min(ltv, 9999).toFixed(2)),
+          haircut_pct: haircutPct, valor_mtm: mtm.toFixed(2), ltv_pct: Number(ltv.toFixed(2)),
         },
         evidencia: [{ tipo: 'LEITURA_ORACULO', id: leitura.id, hash: '0x' + '0'.repeat(64) }],
       });
@@ -61,7 +61,11 @@ export class MercadoService {
     }
     return {
       contrato_id: contratoId, preco_saca: preco.toFixed(2), valor_mtm: mtm.toFixed(2),
-      ltv_pct: Number(ltv.toFixed(2)), haircut_pct: haircutPct,
+      ltv_pct: Number(ltv.toFixed(2)),
+      // LTV acima de 100% significa colateral que não cobre o valor de face. É
+      // sinal para o credor, não erro de cálculo.
+      colateral_insuficiente: ltv > 100,
+      haircut_pct: haircutPct,
       frescor_segundos: leitura.idade_segundos, aviso: leitura.aviso,
     };
   }

@@ -153,3 +153,16 @@ em sete frentes paralelas depois.
 - Compatibilidade: aditiva, com padrão de 30 m.
 - Princípios: coerência da evidência (mandato de E5).
 - Decisão: **aceita**.
+
+## SMC-011 — LTV deixa de ser limitado a 100%
+- Solicitante: A2
+- Artefato: `ops.marcacao_mercado.ltv_pct`
+- Motivo: a coluna usava o domínio `ops.pct`, limitado a 100. LTV acima de 100%
+  é o caso que importa — colateral que não cobre o valor de face — e o banco o
+  recusava. Um esquema que impede registrar a situação perigosa esconde o risco
+  em nome da higiene do tipo. Descoberto executando a demonstração, não em
+  revisão.
+- Impacto: A2 grava o valor real; A6 passa a poder exibi-lo.
+- Compatibilidade: quebrante no tipo da coluna.
+- Princípios: coerência de risco (mandato de E4).
+- Decisão: **aceita**.

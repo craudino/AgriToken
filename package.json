@@ -21,7 +21,8 @@
     "validar:tipos": "node infra/ci/gerar-tipos.mjs",
     "validar:web": "node apps/web/test/sem-jargao.mjs",
     "web:build": "next build apps/web",
-    "web:dev": "next dev apps/web -p 3000"
+    "web:dev": "next dev apps/web -p 3000",
+    "aceite:conciliacao": "node infra/demo/aceite-conciliacao.mjs"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.8",

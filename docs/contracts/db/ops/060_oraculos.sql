@@ -190,7 +190,12 @@ CREATE TABLE ops.marcacao_mercado (
   preco_saca     ops.valor_brl NOT NULL,
   haircut_pct    ops.pct NOT NULL,
   valor_mtm      ops.valor_brl NOT NULL,
-  ltv_pct        ops.pct NOT NULL,
+  -- SMC-011: LTV não é uma porcentagem limitada a 100. Usar ops.pct aqui
+  -- tornava irrepresentável justamente o caso que importa — colateral que não
+  -- cobre o valor de face —, e o banco recusava a gravação em vez de acender a
+  -- luz vermelha. Um esquema que impede registrar a situação perigosa esconde
+  -- o risco em nome da higiene do tipo.
+  ltv_pct        numeric(10,4) NOT NULL CHECK (ltv_pct >= 0),
   calculada_em   timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX ix_mtm_contrato ON ops.marcacao_mercado (contrato_id, calculada_em DESC);
