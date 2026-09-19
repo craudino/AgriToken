@@ -5,6 +5,7 @@ import { ConciliacaoService } from './conciliacao.service';
 import { MercadoService } from './mercado.service';
 import { WaterfallService } from './waterfall.service';
 import { LiquidacaoService } from './liquidacao.service';
+import { AgendaService } from './agenda.service';
 
 const ctxDe = (c?: string): Contexto => ({
   correlacaoId: c ?? crypto.randomUUID(), origem: versaoServico('services/core'),
@@ -23,11 +24,52 @@ export class AppController {
     private readonly mercado: MercadoService,
     private readonly waterfall: WaterfallService,
     private readonly liquidacao: LiquidacaoService,
+    private readonly agenda: AgendaService,
   ) {}
 
   @Publica()
   @Get('/saude')
   saude() { return { servico: 'core', ok: true }; }
+
+  /**
+   * Prontidão, distinta de saúde: saúde diz que o processo está vivo,
+   * prontidão diz que ele consegue trabalhar. Um serviço vivo com o banco fora
+   * do ar responde 200 em /saude e engana o orquestrador.
+   *
+   * É pública porque sonda de orquestrador não carrega credencial — e devolve
+   * apenas o veredicto. Mensagem de erro de banco em rota aberta entrega
+   * topologia interna a quem só precisava saber se pode receber tráfego.
+   */
+  @Publica()
+  @Get('/saude/pronto')
+  async pronto() {
+    const problemas = await this.diagnostico();
+    if (problemas.length) throw new HttpException({ pronto: false }, 503);
+    return { pronto: true };
+  }
+
+  /** O mesmo diagnóstico, com detalhe, para quem tem escopo de auditoria. */
+  @Escopos('auditoria:ler')
+  @Get('/diagnostico')
+  async diagnosticoDetalhado() {
+    const problemas = await this.diagnostico();
+    return { pronto: problemas.length === 0, problemas, agenda: this.agenda.estado() };
+  }
+
+  private async diagnostico(): Promise<string[]> {
+    const problemas: string[] = [];
+    try { await poolOps().query('SELECT 1'); }
+    catch (e) { problemas.push(`banco operacional: ${(e as Error).message}`); }
+    try {
+      const r = await verificarCadeia();
+      if (r.inconsistentes > 0) problemas.push(`trilha de auditoria: ${r.inconsistentes} registros inconsistentes`);
+    } catch (e) { problemas.push(`trilha de auditoria: ${(e as Error).message}`); }
+    return problemas;
+  }
+
+  @Escopos('auditoria:ler')
+  @Get('/agenda')
+  estadoAgenda() { return this.agenda.estado(); }
 
   // ------------------------------------------------------------- contratos
   @Escopos('contrato:ler')

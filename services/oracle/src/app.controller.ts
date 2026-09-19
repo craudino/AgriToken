@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Headers, HttpException, Param, Post, Query } from '@nestjs/common';
 import { poolOps, emTransacao, publicar, versaoServico, Contexto, ProblemaCpr, log, TipoLeitura , Escopos, Publica } from '@cpr/nucleo';
 import { QuorumService } from './quorum.service';
+import { AgendaOraculoService } from './agenda.service';
 import * as fontes from './fontes';
 
 const ctxDe = (c?: string): Contexto => ({
@@ -9,11 +10,28 @@ const ctxDe = (c?: string): Contexto => ({
 
 @Controller()
 export class AppController {
-  constructor(private readonly quorum: QuorumService) {}
+  constructor(
+    private readonly quorum: QuorumService,
+    private readonly agenda: AgendaOraculoService,
+  ) {}
 
   @Publica()
   @Get('/saude')
   saude() { return { servico: 'oracle', ok: true }; }
+
+  // Pública porque sonda de orquestrador não carrega credencial; devolve só o
+  // veredicto, porque detalhe de erro em rota aberta é mapa da casa.
+  @Publica()
+  @Get('/saude/pronto')
+  async pronto() {
+    try { await poolOps().query('SELECT 1'); }
+    catch { throw new HttpException({ pronto: false }, 503); }
+    return { pronto: true };
+  }
+
+  @Escopos('auditoria:ler')
+  @Get('/agenda')
+  estadoAgenda() { return this.agenda.estado(); }
 
   @Escopos('oraculo:coletar')
   @Post('/leituras/coletar')

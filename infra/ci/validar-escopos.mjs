@@ -39,8 +39,12 @@ for (const arquivo of controladores) {
     const escopo = texto.match(/@Escopos\('([^']+)'\)/);
     if (texto.includes('@Publica()')) {
       publicas++;
-      if (m[2] !== '/saude') {
-        falhas.push(`${relative(RAIZ, arquivo)}:${i + 1} — ${m[1]} ${m[2]} está pública; só /saude deveria estar`);
+      // Sondas de orquestrador não carregam credencial, e são as únicas rotas
+      // abertas. Ambas devolvem veredicto sem detalhe — o teste de que não
+      // vazam estado está em aceite-auth.
+      const SONDAS = ['/saude', '/saude/pronto'];
+      if (!SONDAS.includes(m[2])) {
+        falhas.push(`${relative(RAIZ, arquivo)}:${i + 1} — ${m[1]} ${m[2]} está pública; só ${SONDAS.join(' e ')} podem estar`);
       }
       return;
     }

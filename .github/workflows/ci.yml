@@ -1,14 +1,23 @@
 # Portão de qualidade. Cada passo corresponde a um princípio da Seção 2 do
 # briefing; afrouxar qualquer um deles é mudança de contrato, não ajuste de CI.
-name: validar-contratos
+#
+# Dois trabalhos, de propósito: `contratos` é rápido e roda sempre; `integracao`
+# sobe a pilha inteira e prova o que só a execução prova. Um CI que só verifica
+# contrato dá a impressão de cobertura que o portão G1 desmentiu.
+name: ci
 
 on:
   pull_request:
   push:
     branches: [main, develop]
 
+env:
+  AMBIENTE: desenvolvimento
+  CPR_SEGREDO_JWT: ci-somente-para-integracao-com-32-caracteres
+
 jobs:
   contratos:
+    name: Contratos e princípios
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -28,24 +37,111 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
+        with: { node-version: '22', cache: npm }
       - run: npm ci
       - name: Cliente PostgreSQL
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Bases separadas
-        # Em CI as três compartilham a instância; em qualquer outro ambiente a
-        # separação é física por decisão (ADR-0002).
-        run: |
-          for db in cpr_ops cpr_pii cpr_audit; do
-            createdb -h localhost -U ci "$db"
-          done
+        run: for db in cpr_ops cpr_pii cpr_audit; do createdb -h localhost -U ci "$db"; done
+
       - name: Contratos de API
         run: npm run validar:openapi
       - name: Esquemas de evento
         run: npm run validar:eventos
       - name: Interfaces e ABIs
         run: npm run validar:contratos
+      - name: Tipos derivados dos contratos
+        run: npm run validar:tipos
+      - name: Fronteira regulatória no código-fonte
+        run: npm run validar:p7
+      - name: Escopos declarados em toda rota
+        run: npm run validar:escopos
+      - name: Ambiente em contêineres
+        run: npm run validar:compose
+      - name: Jargão na interface do produtor
+        run: npm run validar:web
       - name: Esquema de dados e conformidade
         run: npm run validar:esquema
+
+      - name: Contratos inteligentes
+        run: npx hardhat test
+      - name: Cobertura dos contratos (>= 90% linhas e ramos)
+        run: npx hardhat coverage --testfiles "test/chain/*.test.cjs"
+
+  integracao:
+    name: Integração ponta a ponta
+    runs-on: ubuntu-latest
+    needs: contratos
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_USER: postgres
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+        ports: ['5432:5432']
+    env:
+      PGPASSWORD: ci
+      CPR_PULAR_BD: '1'
+      OPS_URL: postgres://postgres:ci@localhost:5432/cpr_ops
+      PII_URL: postgres://postgres:ci@localhost:5432/cpr_pii
+      AUDIT_URL: postgres://postgres:ci@localhost:5432/cpr_audit
+      OPS_URL_MIGRACAO: postgres://postgres:ci@localhost:5432/cpr_ops?application_name=migracao
+      PII_URL_MIGRACAO: postgres://postgres:ci@localhost:5432/cpr_pii?application_name=migracao
+      AUDIT_URL_MIGRACAO: postgres://postgres:ci@localhost:5432/cpr_audit?application_name=migracao
+      CHAVE_INDICE_CEGO: ci-indice-cego
+      KMS_DIR: /tmp/cpr-kms
+      DIR_BRUTO: /tmp/cpr-bruto
+      RPC_URL: http://127.0.0.1:8545
+      INTERVALO_CONCILIACAO_S: '30'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: npm }
+      - run: npm ci
+      - name: Cliente PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Bases e migrações
+        run: |
+          for db in cpr_ops cpr_pii cpr_audit; do createdb -h localhost -U postgres "$db"; done
+          node infra/db/migrar.mjs
+          psql "$OPS_URL" -v ON_ERROR_STOP=1 -f infra/db/referencia.sql
+
+      - name: Construir serviços e interface
+        run: |
+          npx tsc -b packages/nucleo services/compliance services/oracle services/core services/eudr infra/simulador-registradora
+          npx next build apps/web
+
+      - name: Cadeia e contratos
+        run: |
+          npx hardhat node > /tmp/besu.log 2>&1 &
+          for i in $(seq 30); do curl -sf -X POST -H 'content-type: application/json' \
+            --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+            http://127.0.0.1:8545 && break || sleep 1; done
+          npx hardhat run contracts/scripts/implantar.cjs --network local
+
+      - name: Massa sintética e serviços
+        run: |
+          node infra/dados/massa.mjs
+          node infra/orquestrar.mjs subir
+          for i in $(seq 40); do curl -sf http://127.0.0.1:3003/saude && break || sleep 1; done
+          node infra/orquestrar.mjs estado
+
+      - name: Aceite de autorização
+        run: npm run aceite:auth
+
+      - name: Aceite de conciliação (14 tipos de divergência)
+        run: npm run aceite:conciliacao
+
+      - name: Demonstração ponta a ponta
+        run: npm run demo
+
+      - name: Varredura de PII na cadeia
+        run: npm run validar:pii-cadeia
+
+      - name: Registros dos serviços em caso de falha
+        if: failure()
+        run: tail -n 120 .run/*.log || true

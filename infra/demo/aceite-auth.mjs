@@ -38,8 +38,15 @@ registrar('sem token na eliminação de titular', 401,
   await bater(`${COMPLIANCE}/titulares/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/eliminacao`,
     { metodo: 'POST', corpo: { canal: 'x', solicitante: 'y' } }));
 
-// 2. Saúde é pública de propósito — e é a única.
+// 2. As duas sondas são públicas de propósito, e são as únicas.
 registrar('GET /saude sem token', 200, await bater(`${CORE}/saude`));
+registrar('GET /saude/pronto sem token', 200, await bater(`${CORE}/saude/pronto`));
+registrar('diagnóstico detalhado sem token', 401, await bater(`${CORE}/diagnostico`));
+
+// A sonda pública não pode entregar estado interno a quem não se identificou.
+const corpoSonda = await (await fetch(`${CORE}/saude/pronto`)).json();
+registrar('sonda pública não vaza estado interno', 'só o veredicto',
+  Object.keys(corpoSonda).join(',') === 'pronto' ? 'só o veredicto' : `vazou: ${Object.keys(corpoSonda)}`);
 
 // 3. Token válido, escopo errado. É o caso que separa autenticação de
 //    autorização, e o que a maioria das APIs erra.

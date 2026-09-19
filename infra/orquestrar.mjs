@@ -84,7 +84,10 @@ const comando = process.argv[2] ?? 'estado';
 
 if (comando === 'subir') {
   console.log('== banco ==');
-  execSync('bash infra/db/subir-local.sh', { cwd: RAIZ, stdio: 'inherit' });
+  // Em CI o banco vem de um contêiner de serviço e as migrações já rodaram;
+  // subir um cluster local por cima seria subir dois bancos e usar o errado.
+  if (process.env.CPR_PULAR_BD === '1') console.log('pulado (CPR_PULAR_BD=1)');
+  else execSync('bash infra/db/subir-local.sh', { cwd: RAIZ, stdio: 'inherit' });
   console.log('== nó EVM ==');
   if (!pidDe('evm')) {
     const saida = openSync(logfile('evm'), 'a');

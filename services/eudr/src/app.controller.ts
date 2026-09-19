@@ -2,6 +2,7 @@ import { Body, Controller, Get, Headers, HttpException, Param, Post, Query } fro
 import { poolOps, versaoServico, Contexto, ProblemaCpr , Escopos, Publica } from '@cpr/nucleo';
 import { GeoService } from './geo.service';
 import { EudrService } from './eudr.service';
+import { AgendaEudrService } from './agenda.service';
 
 const ctxDe = (c?: string): Contexto => ({
   correlacaoId: c ?? crypto.randomUUID(), origem: versaoServico('services/eudr'),
@@ -13,11 +14,29 @@ const tratar = (e: unknown): never => {
 
 @Controller()
 export class AppController {
-  constructor(private readonly geo: GeoService, private readonly eudr: EudrService) {}
+  constructor(
+    private readonly geo: GeoService,
+    private readonly eudr: EudrService,
+    private readonly agenda: AgendaEudrService,
+  ) {}
 
   @Publica()
   @Get('/saude')
   saude() { return { servico: 'eudr', ok: true }; }
+
+  // Pública porque sonda de orquestrador não carrega credencial; devolve só o
+  // veredicto, porque detalhe de erro em rota aberta é mapa da casa.
+  @Publica()
+  @Get('/saude/pronto')
+  async pronto() {
+    try { await poolOps().query('SELECT 1'); }
+    catch { throw new HttpException({ pronto: false }, 503); }
+    return { pronto: true };
+  }
+
+  @Escopos('auditoria:ler')
+  @Get('/agenda')
+  estadoAgenda() { return this.agenda.estado(); }
 
   @Escopos('simulador:operar')
   @Post('/sim/bases/carregar')
