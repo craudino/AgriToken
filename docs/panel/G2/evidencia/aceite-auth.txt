@@ -1,0 +1,31 @@
+
+> cpr-digital@0.1.0 aceite:auth
+> node infra/demo/aceite-auth.mjs
+
+┌─────────┬─────────────────────────────────────────────────────────────────┬──────────────────┬──────────────────┬───────────┐
+│ (index) │ caso                                                            │ esperado         │ obtido           │ resultado │
+├─────────┼─────────────────────────────────────────────────────────────────┼──────────────────┼──────────────────┼───────────┤
+│ 0       │ 'sem token em GET /contratos'                                   │ 401              │ 401              │ 'ok'      │
+│ 1       │ 'sem token em POST /contratos'                                  │ 401              │ 401              │ 'ok'      │
+│ 2       │ 'sem token em GET /tratamentos'                                 │ 401              │ 401              │ 'ok'      │
+│ 3       │ 'sem token na eliminação de titular'                            │ 401              │ 401              │ 'ok'      │
+│ 4       │ 'GET /saude sem token'                                          │ 200              │ 200              │ 'ok'      │
+│ 5       │ 'GET /saude/pronto sem token'                                   │ 200              │ 200              │ 'ok'      │
+│ 6       │ 'diagnóstico detalhado sem token'                               │ 401              │ 401              │ 'ok'      │
+│ 7       │ 'sonda pública não vaza estado interno'                         │ 'só o veredicto' │ 'só o veredicto' │ 'ok'      │
+│ 8       │ 'credor tentando originar contrato'                             │ 403              │ 403              │ 'ok'      │
+│ 9       │ 'credor tentando reconciliar divergência'                       │ 403              │ 403              │ 'ok'      │
+│ 10      │ 'credor tentando eliminar titular'                              │ 403              │ 403              │ 'ok'      │
+│ 11      │ 'operador de privacidade tentando ler carteira'                 │ 403              │ 403              │ 'ok'      │
+│ 12      │ 'operador de conciliação tentando injetar divergência'          │ 403              │ 403              │ 'ok'      │
+│ 13      │ 'credor lendo a carteira'                                       │ 200              │ 200              │ 'ok'      │
+│ 14      │ 'operador executando conciliação'                               │ 201              │ 201              │ 'ok'      │
+│ 15      │ 'assinatura trocada'                                            │ 401              │ 401              │ 'ok'      │
+│ 16      │ 'escopos elevados no payload, assinatura antiga'                │ 401              │ 401              │ 'ok'      │
+│ 17      │ 'alg: none'                                                     │ 401              │ 401              │ 'ok'      │
+│ 18      │ 'token expirado'                                                │ 401              │ 401              │ 'ok'      │
+│ 19      │ 'perfil de demonstração alcança o simulador em desenvolvimento' │ 'autorizado'     │ 'autorizado'     │ 'ok'      │
+│ 20      │ 'perfil de demonstração fora de desenvolvimento'                │ true             │ true             │ 'ok'      │
+└─────────┴─────────────────────────────────────────────────────────────────┴──────────────────┴──────────────────┴───────────┘
+
+21/21 casos conformes

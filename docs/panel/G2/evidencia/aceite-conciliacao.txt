@@ -1,0 +1,28 @@
+
+> cpr-digital@0.1.0 aceite:conciliacao
+> node infra/demo/aceite-conciliacao.mjs
+
+
+=== Placar de detecção de divergências ===
+
+┌─────────┬──────────────────────────────────┬────────────┬───────────┬─────────────┬──────────┬─────────────┐
+│ (index) │ tipo                             │ lado       │ detectado │ latencia_ms │ congelou │ situacao    │
+├─────────┼──────────────────────────────────┼────────────┼───────────┼─────────────┼──────────┼─────────────┤
+│ 0       │ 'TITULO_BAIXADO_NO_REGISTRO'     │ 'REGISTRO' │ 'sim'     │ 90          │ 'sim'    │ 'CONGELADO' │
+│ 1       │ 'CESSAO_NAO_REFLETIDA'           │ 'REGISTRO' │ 'sim'     │ 90          │ 'sim'    │ 'CONGELADO' │
+│ 2       │ 'VALOR_FACE_ALTERADO'            │ 'REGISTRO' │ 'sim'     │ 93          │ 'sim'    │ 'CONGELADO' │
+│ 3       │ 'QUANTIDADE_ALTERADA'            │ 'REGISTRO' │ 'sim'     │ 91          │ 'sim'    │ 'CONGELADO' │
+│ 4       │ 'VENCIMENTO_ALTERADO'            │ 'REGISTRO' │ 'sim'     │ 88          │ 'sim'    │ 'CONGELADO' │
+│ 5       │ 'GARANTIA_ALTERADA'              │ 'REGISTRO' │ 'sim'     │ 92          │ 'sim'    │ 'CONGELADO' │
+│ 6       │ 'ONUS_OU_GRAVAME_NAO_REFLETIDO'  │ 'REGISTRO' │ 'sim'     │ 91          │ 'sim'    │ 'CONGELADO' │
+│ 7       │ 'TITULO_INEXISTENTE_NO_REGISTRO' │ 'REGISTRO' │ 'sim'     │ 61          │ 'sim'    │ 'CONGELADO' │
+│ 8       │ 'ESTADO_DIVERGENTE'              │ 'REGISTRO' │ 'sim'     │ 88          │ 'sim'    │ 'CONGELADO' │
+│ 9       │ 'HASH_DOCUMENTAL_DIVERGENTE'     │ 'REGISTRO' │ 'sim'     │ 92          │ 'sim'    │ 'CONGELADO' │
+│ 10      │ 'TRANSFERENCIA_SEM_CESSAO'       │ 'TOKEN'    │ 'sim'     │ 235         │ 'sim'    │ 'CONGELADO' │
+│ 11      │ 'FRACIONAMENTO_NAO_REFLETIDO'    │ 'TOKEN'    │ 'sim'     │ 215         │ 'sim'    │ 'CONGELADO' │
+│ 12      │ 'TOKEN_AUSENTE_PARA_REGISTRO'    │ 'REGISTRO' │ 'sim'     │ 1102        │ '-'      │ 'n/a'       │
+│ 13      │ 'DUPLICIDADE_DE_ANCORA'          │ 'TOKEN'    │ 'sim'     │ 0           │ '-'      │ 'PREVENIDA' │
+└─────────┴──────────────────────────────────┴────────────┴───────────┴─────────────┴──────────┴─────────────┘
+
+detectados 14/14
+nota (DUPLICIDADE_DE_ANCORA): Impossível por construção: o contrato reverte a segunda emissão (P3). Detecção por prevenção, não por conciliação. execution reverted (unknown custom error) (action="estimateGas", data="0x8bb2c83

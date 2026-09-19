@@ -1,0 +1,7 @@
+
+> cpr-digital@0.1.0 validar:pii-cadeia
+> node infra/ci/varrer-pii-cadeia.mjs
+
+OK  autoteste do detector: 4 padrões reconhecidos, nenhum falso positivo
+varredura: 22 blocos, 20 transações, 17 eventos
+OK  P2: nenhum padrão identificável em calldata, logs ou tópicos

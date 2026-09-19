@@ -1,0 +1,153 @@
+
+> cpr-digital@0.1.0 validar
+> npm run validar:openapi && npm run validar:eventos && npm run validar:contratos && npm run validar:tipos && npm run validar:p7 && npm run validar:escopos && npm run validar:compose && npm run validar:web && npm run validar:esquema
+
+
+> cpr-digital@0.1.0 validar:openapi
+> redocly lint --config infra/ci/redocly.yaml && node infra/ci/validar-openapi.mjs
+
+validating docs/contracts/openapi/core.yaml...
+docs/contracts/openapi/core.yaml: validated in 36ms
+
+validating docs/contracts/openapi/oracle.yaml...
+docs/contracts/openapi/oracle.yaml: validated in 38ms
+
+validating docs/contracts/openapi/eudr.yaml...
+docs/contracts/openapi/eudr.yaml: validated in 13ms
+
+validating docs/contracts/openapi/compliance.yaml...
+docs/contracts/openapi/compliance.yaml: validated in 11ms
+
+validating docs/contracts/openapi/registradora.yaml...
+docs/contracts/openapi/registradora.yaml: validated in 9ms
+
+Woohoo! Your API descriptions are valid. 🎉
+
+OK  P3: toda operação irreversível exige Idempotency-Key
+OK  P1: toda resposta com estado de contrato sinaliza a conciliação
+OK  P1: a interface da registradora é somente leitura
+OK  P2: nenhum campo identificante fora da porta de entrada do compliance
+OK  P4/P5: recusa por princípio é parte declarada do contrato
+OK  P6: enums da API e do esquema de dados coincidem
+
+contratos de API conformes
+
+> cpr-digital@0.1.0 validar:eventos
+> node infra/ci/validar-eventos.mjs
+
+OK  catálogo e payloads cobrem-se: 23 tipos
+OK  todos os exemplos validam contra envelope e payload
+OK  P2: nenhum campo nem exemplo com padrão identificante
+OK  P6: canonicalização do barramento coincide com a do banco
+OK  fronteiras de produção e consumo consistentes com os sete agentes
+
+esquemas de evento conformes
+
+> cpr-digital@0.1.0 validar:contratos
+> node infra/ci/validar-abis.mjs
+
+OK  P7: nenhuma função de custódia, novação ou promessa de rendimento na ABI
+OK  P2: nenhuma função mutante recebe texto livre
+OK  P7: o cofre de garantias registra vínculos e não movimenta valor
+OK  P1: o espelho expõe congelamento por divergência e baixa por liquidação
+OK  P6: ABIs congeladas conferem com as interfaces Solidity
+
+interfaces de W1 conformes
+
+> cpr-digital@0.1.0 validar:tipos
+> node infra/ci/gerar-tipos.mjs
+
+OK  P6: tipos e catálogo derivados dos contratos congelados, sem divergência
+
+> cpr-digital@0.1.0 validar:p7
+> node infra/ci/validar-p7.mjs
+
+OK  P7: 101 arquivos de services/, apps/, contracts/ e infra/ varridos
+OK  P7: nenhum identificador nem texto de travessia de fronteira
+
+fronteira regulatória conforme
+
+> cpr-digital@0.1.0 validar:escopos
+> node infra/ci/validar-escopos.mjs
+
+escopos: 74 rotas em 5 controladores, 8 pública(s)
+  auditoria:ler                11
+  conciliacao:executar         2
+  conciliacao:reconciliar      1
+  contrato:escrever            8
+  contrato:ler                 10
+  credencial:emitir            1
+  credencial:verificar         1
+  dds:emitir                   1
+  geo:avaliar                  2
+  geo:bruto                    1
+  geo:ingerir                  1
+  oraculo:coletar              1
+  oraculo:disputar             1
+  oraculo:ler                  5
+  oraculo:publicar-fonte       1
+  participante:habilitar       2
+  pii:eliminar                 2
+  pii:tratamentos              1
+  produtor:ler                 2
+  produtor:onboarding          1
+  registro:ler                 2
+  simulador:operar             9
+
+OK  toda rota declara escopo, e só /saude é pública
+
+> cpr-digital@0.1.0 validar:compose
+> node infra/ci/validar-compose.mjs
+
+OK  todo Dockerfile e caminho de build referenciado existe
+OK  nenhum segredo tem valor padrão: faltando, o compose não sobe
+OK  rede do cofre tem só bd-pii, migracao, compliance
+OK  só o compliance recebe credencial do cofre de PII
+OK  só a interface expõe porta ao hospedeiro
+OK  simulador de registradora só sobe no perfil de teste
+OK  AMBIENTE não tem desenvolvimento como padrão
+
+compose: 14 serviços, 4 redes
+verificação estática do compose conforme (execução real ainda pendente)
+
+> cpr-digital@0.1.0 validar:web
+> node apps/web/test/sem-jargao.mjs
+
+fluxo do produtor: 3 etapas, 1 decisões (1 botões, 0 campos)
+OK  W6: nenhuma palavra de sistema no texto do produtor, dentro do limite de decisões
+
+> cpr-digital@0.1.0 validar:esquema
+> bash infra/ci/validar-esquema.sh
+
+initdb: warning: enabling "trust" authentication for local connections
+initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+OK  P2: CPF em campo textual de cpr_ops (rejeitado: value for domain ops.texto_sem_pii violates check constraint "sem_cpf")
+OK  P2: e-mail em campo textual de cpr_ops (rejeitado: value for domain ops.texto_sem_pii violates check constraint "sem_emai)
+OK  P3: segunda âncora para o mesmo registro (rejeitado: duplicate key value violates unique constraint "uq_ancora")
+OK  Máquina de estados: RASCUNHO -> LIQUIDADO (rejeitado: transicao proibida: RASCUNHO -> LIQUIDADO)
+OK  P1: transição em contrato congelado (rejeitado: contrato congelado por divergencia de conciliacao (P1): ATIVO -> LIQUI)
+OK  P1: divergência crítica sem congelar o contrato (rejeitado: new row for relation "divergencia" violates check constraint "critica_)
+OK  P1: destrancar congelamento pela string, sem divergencia_id (rejeitado: saida de congelamento exige divergencia_id (P1))
+OK  P1: destrancar apontando para divergencia ainda ABERTA (rejeitado: divergencia aaaaaaaa-0000-4000-8000-000000000001 ainda em ABERTA (P1))
+OK  P1: destrancar por processo automático, sem ator humano (rejeitado: saida de congelamento exige ator humano identificado (P1, P5))
+OK  P1: reconciliação humana com divergência reconciliada é aceita
+OK  P1: guarda que não existe no grafo de transições (rejeitado: guarda guarda_inventada nao corresponde a transicao ATIVO -> INADIMPLE)
+OK  P1: guarda correta do grafo é aceita
+OK  P4: configurar leitura contratual com fonte única (rejeitado: new row for relation "politica_quorum" violates check constraint "cont)
+OK  P4: decisão contratual sobre leitura sem quórum (rejeitado: leitura em estado SEM_QUORUM nao produz efeito contratual (P4))
+OK  P4: leitura informativa sustentando decisão contratual (rejeitado: leitura informativa nao pode sustentar decisao contratual (P4))
+OK  P4: marcar como DEGRADADA leitura abaixo do quórum independente (rejeitado: leitura PRECO nao atinge quorum independente da politica (1 < 2) (P4))
+OK  P4: degradação com redundância independente preservada é aceita
+OK  P4: leitura expirada sustentando decisão contratual (rejeitado: leitura expirada em 2026-09-18 00:49:41.425484+00 nao produz efeito co)
+OK  P5: alteração de evento já registrado (rejeitado: evento e imutavel (P5))
+OK  P5: DELETE em ops.evento é inócuo
+OK  P3: segundo penhor sobre o mesmo talhão (rejeitado: duplicate key value violates unique constraint "uq_garantia_talhao_ati)
+OK  SMC-006: penhor não averbado ocupando nível 1 do waterfall (rejeitado: new row for relation "garantia" violates check constraint "nivel_alto_)
+OK  P5: cadeia de hash íntegra em 3 registros
+OK  P5: UPDATE na trilha de auditoria (rejeitado: audit.registro e append-only (P5): UPDATE recusado)
+OK  P5: DELETE na trilha de auditoria (rejeitado: audit.registro e append-only (P5): DELETE recusado)
+OK  P5: TRUNCATE na trilha de auditoria (rejeitado: audit.registro e append-only (P5): TRUNCATE recusado)
+OK  P2: CPF no payload da trilha de auditoria (rejeitado: new row for relation "registro" violates check constraint "payload_sem)
+OK  P6: canonicalização determinística -> {"a":{"c":[3,2],"d":4},"b":1}
+esquema conforme
+exit=0

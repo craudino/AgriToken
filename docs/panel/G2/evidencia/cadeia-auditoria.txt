@@ -1,0 +1,42 @@
+=== Integridade da trilha de auditoria (P5) ===
+ registros | inconsistentes 
+-----------+----------------
+       519 |              6
+(1 row)
+
+
+=== Registros reprovados ===
+ seq |           tipo            |        origem         
+-----+---------------------------+-----------------------
+ 494 | oraculo.leitura-efetivada | services/oracle@0.1.0
+ 496 | oraculo.leitura-efetivada | services/oracle@0.1.0
+ 501 | oraculo.leitura-efetivada | services/oracle@0.1.0
+ 503 | oraculo.leitura-efetivada | services/oracle@0.1.0
+ 505 | oraculo.leitura-efetivada | services/oracle@0.1.0
+ 507 | oraculo.leitura-efetivada | services/oracle@0.1.0
+(6 rows)
+
+
+=== Causa: a cadeia BIFURCA — pares partilham hash_anterior ===
+ seq |   anterior   |     hash     
+-----+--------------+--------------
+ 492 | b6103d74d879 | 34e6b0353a2a
+ 493 | 34e6b0353a2a | cc88281db1c3
+ 494 | 34e6b0353a2a | 1f5e8e37b8be
+ 495 | 1f5e8e37b8be | 7fb7756b4a9a
+ 496 | 1f5e8e37b8be | e1a51a7b27ba
+ 497 | e1a51a7b27ba | d19a7866d6c5
+ 498 | d19a7866d6c5 | aa9ca3f8c1f5
+ 499 | aa9ca3f8c1f5 | 198b9bf80466
+ 500 | 198b9bf80466 | 20bb0d611781
+(9 rows)
+
+
+=== Alcance ===
+                metrica                 |  n  
+----------------------------------------+-----
+ pontos de bifurcacao                   |   6
+ registros orfaos (nada encadeia neles) |   7
+ total                                  | 519
+(3 rows)
+

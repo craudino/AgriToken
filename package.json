@@ -2,7 +2,7 @@
   "name": "cpr-digital",
   "version": "0.1.0",
   "private": true,
-  "description": "MVP CPR Digital \u2014 raiz do monorepo. Ferramental de valida\u00e7\u00e3o dos contratos congelados da Fase 0.",
+  "description": "MVP CPR Digital — raiz do monorepo. Ferramental de validação dos contratos congelados da Fase 0.",
   "type": "module",
   "scripts": {
     "validar:openapi": "redocly lint --config infra/ci/redocly.yaml && node infra/ci/validar-openapi.mjs",
@@ -28,7 +28,8 @@
     "token": "node infra/auth/emitir-token.mjs",
     "validar:compose": "node infra/ci/validar-compose.mjs",
     "bd:migrar": "node infra/db/migrar.mjs",
-    "bd:estado": "node infra/db/migrar.mjs --estado"
+    "bd:estado": "node infra/db/migrar.mjs --estado",
+    "aceite:oraculo": "node infra/demo/aceite-oraculo.mjs"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.8",

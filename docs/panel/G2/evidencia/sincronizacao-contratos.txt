@@ -1,0 +1,94 @@
+=== Rota declarada (OpenAPI congelado) x rota implementada (controlador) ===
+
+--- A. Com o prefixo /v1 declarado em servers: ---
+   IMPLEMENTADA E NÃO DECLARADA   POST /sim/indisponibilidade
+
+total: 42 declaradas, 74 implementadas, 116 divergências
+
+--- B. Normalizado (ignorando /v1), divergências REAIS de rota: ---
+
+core.yaml  declaradas=13 implementadas=26
+   DECLARADA E NÃO IMPLEMENTADA   POST /contratos/:p/transicoes
+   DECLARADA E NÃO IMPLEMENTADA   POST /contratos/:p/conciliacao
+   IMPLEMENTADA E NÃO DECLARADA   GET /saude
+   IMPLEMENTADA E NÃO DECLARADA   GET /saude/pronto
+   IMPLEMENTADA E NÃO DECLARADA   GET /diagnostico
+   IMPLEMENTADA E NÃO DECLARADA   GET /agenda
+   IMPLEMENTADA E NÃO DECLARADA   POST /contratos/:p/verificacao
+   IMPLEMENTADA E NÃO DECLARADA   POST /contratos/:p/registro
+   IMPLEMENTADA E NÃO DECLARADA   POST /conciliacao/executar
+   IMPLEMENTADA E NÃO DECLARADA   POST /conciliacao/divergencias/:p/congelar-onchain
+   IMPLEMENTADA E NÃO DECLARADA   GET /placar/conciliacao
+   IMPLEMENTADA E NÃO DECLARADA   POST /contratos/:p/marcacao
+   IMPLEMENTADA E NÃO DECLARADA   POST /contratos/:p/garantias
+   IMPLEMENTADA E NÃO DECLARADA   POST /contratos/:p/inadimplencia
+   IMPLEMENTADA E NÃO DECLARADA   GET /auditoria/cadeia
+   IMPLEMENTADA E NÃO DECLARADA   GET /reacoes
+   IMPLEMENTADA E NÃO DECLARADA   POST /reacoes
+
+oracle.yaml  declaradas=8 implementadas=15
+   DECLARADA E NÃO IMPLEMENTADA   GET /leituras
+   DECLARADA E NÃO IMPLEMENTADA   PUT /politicas
+   IMPLEMENTADA E NÃO DECLARADA   GET /saude
+   IMPLEMENTADA E NÃO DECLARADA   GET /saude/pronto
+   IMPLEMENTADA E NÃO DECLARADA   GET /agenda
+   IMPLEMENTADA E NÃO DECLARADA   POST /leituras/coletar
+   IMPLEMENTADA E NÃO DECLARADA   POST /sim/fonte/:p/derrubar
+   IMPLEMENTADA E NÃO DECLARADA   POST /sim/fonte/:p/levantar
+   IMPLEMENTADA E NÃO DECLARADA   POST /sim/dia
+   IMPLEMENTADA E NÃO DECLARADA   POST /sim/pagamento
+   IMPLEMENTADA E NÃO DECLARADA   POST /leituras/fonte
+
+eudr.yaml  declaradas=8 implementadas=14
+   IMPLEMENTADA E NÃO DECLARADA   GET /saude
+   IMPLEMENTADA E NÃO DECLARADA   GET /saude/pronto
+   IMPLEMENTADA E NÃO DECLARADA   GET /agenda
+   IMPLEMENTADA E NÃO DECLARADA   POST /sim/bases/carregar
+   IMPLEMENTADA E NÃO DECLARADA   POST /talhoes/:p/reavaliacoes
+   IMPLEMENTADA E NÃO DECLARADA   GET /placar/custo-selo
+
+compliance.yaml  declaradas=8 implementadas=12
+   IMPLEMENTADA E NÃO DECLARADA   GET /saude
+   IMPLEMENTADA E NÃO DECLARADA   POST /participantes/habilitar
+   IMPLEMENTADA E NÃO DECLARADA   POST /participantes/desabilitar
+   IMPLEMENTADA E NÃO DECLARADA   GET /placar/custo-verificacao
+
+registradora.yaml  declaradas=5 implementadas=7
+   IMPLEMENTADA E NÃO DECLARADA   GET /saude
+   IMPLEMENTADA E NÃO DECLARADA   POST /sim/titulos
+
+total: 42 declaradas, 74 implementadas, 40 divergências
+
+
+=== C. Consequência: o alcance das invariantes de princípio ===
+
+infra/ci/validar-openapi.mjs itera sobre doc.paths. Rota ausente da
+especificação não é alcançada por nenhuma das suas verificações — P1
+("nenhuma rota escreve no registro"), P2 ("nenhum campo identificante fora do
+compliance"), P3 ("toda operação irreversível exige Idempotency-Key").
+
+42 rotas declaradas, 74 implementadas: 43% da superfície de API não é
+verificada por essas invariantes. Entre as não alcançadas:
+  POST /contratos/:id/registro                        (P1)
+  POST /conciliacao/divergencias/:id/congelar-onchain (P3, efeito on-chain)
+  POST /contratos/:id/marcacao                        (P1)
+  POST /contratos/:id/inadimplencia                   (P1)
+  POST /participantes/habilitar                       (P2, efeito on-chain)
+  POST /leituras/fonte                                (P4)
+
+=== D. Idempotency-Key: declarado e não implementado ===
+
+  docs/contracts/openapi/comum.yaml   define o parâmetro ChaveIdempotencia
+  docs/contracts/openapi/core.yaml    referencia-o em 5 operações
+  validar-openapi.mjs                 confirma: "OK P3: toda operação
+                                       irreversível exige Idempotency-Key"
+
+  ocorrências de "idempotency" nos controladores implementados:
+    services/core/src/app.controller.ts            0
+    services/oracle/src/app.controller.ts          0
+    services/eudr/src/app.controller.ts            0
+    services/compliance/src/app.controller.ts      0
+    infra/simulador-registradora/src/app.controller.ts  0
+
+  Única ocorrência no código-fonte: infra/ci/validar-openapi.mjs (o próprio
+  validador). O cabeçalho não é lido em lugar nenhum em tempo de execução.

@@ -1,0 +1,134 @@
+
+Version
+=======
+> solidity-coverage: v0.8.17
+
+Instrumenting for coverage...
+=============================
+
+> interfaces/IAncoraRegistro.sol
+> interfaces/ICofreGarantias.sol
+> interfaces/IControleAcesso.sol
+> interfaces/IERC3525.sol
+> interfaces/IEspelhoCPR.sol
+> interfaces/IRegistroParticipantes.sol
+> src/AncoraRegistro.sol
+> src/CofreGarantias.sol
+> src/ControleAcesso.sol
+> src/EspelhoCPR.sol
+> src/RegistroParticipantes.sol
+
+Compilation:
+============
+
+Compiled 11 Solidity files successfully (evm target: paris).
+
+Network Info
+============
+> HardhatEVM: v2.29.1
+> network:    hardhat
+
+
+
+  W1 — caminhos completos
+    emissão
+      ✔ recusa emissão por quem não tem o papel
+      ✔ recusa titular não habilitado
+      ✔ recusa valor zero
+      ✔ recusa âncora nula
+      ✔ expõe âncora, slot, saldo e hash documental
+      ✔ só o próprio espelho vincula âncora
+    permissões e transferência entre tokens
+      ✔ operador aprovado transfere dentro do limite e o limite se esgota (57ms)
+      ✔ recusa transferência entre slots distintos
+      ✔ recusa valor acima do saldo
+      ✔ só o titular aprova
+      ✔ transferência entre tokens recusa destino congelado
+    ciclo de vida
+      ✔ baixa zera o circulante do slot e marca o estado
+      ✔ token baixado não transfere nem é baixado de novo
+      ✔ executar aceita token ativo ou congelado, e nunca baixado (62ms)
+      ✔ não congela duas vezes nem descongela o que não está congelado
+      ✔ não reinicializa
+    participantes
+      ✔ expõe atestação e validade, e recusa validade no passado
+      ✔ só o compliance habilita
+      ✔ exigirHabilitado reverte com o erro tipado
+    controle de acesso
+      ✔ cancela proposta pendente e recusa cancelar o que não existe
+      ✔ não admin não propõe, não concede e não revoga
+      ✔ expõe os sete papéis e a classificação de sensibilidade
+    cofre de garantias
+      ✔ recusa política com número de níveis diferente de cinco
+      ✔ recusa nível fora de ordem e nível inválido
+      ✔ recusa política inexistente
+      ✔ recusa garantia duplicada e libera a existente
+      ✔ registra excussão e expõe estado, nível e política
+      ✔ o teto do nível limita a absorção, e a perda residual sobra
+      ✔ níveis sem garantia não absorvem e não se dizem esgotados
+      ✔ só o originador mexe no cofre
+    atualização
+      ✔ recusa proposta inexistente e implementação sem código
+      ✔ não admin não propõe atualização
+      ✔ não pausa quem não tem o papel
+      ✔ pausa bloqueia emissão, baixa e atualização de hash
+
+  W1 — governança e fronteira
+    ✔ papel sensível não é concedido por chamada única (SMC-005)
+    ✔ proposta não executa antes do prazo, e executa depois
+    ✔ revogação é imediata — atrasar protegeria o atacante
+    ✔ atualização de implementação respeita o timelock (ADR-0004)
+    ✔ pausa suspende circulação e NÃO descongela (ADR-0007)
+    ✔ P7 — o cofre não tem função payable, receive nem fallback
+    ✔ P7 — nenhum contrato aceita ether
+    ✔ congelado não recebe garantia nova (P1)
+    ✔ política de waterfall é imutável depois de registrada (P6) (38ms)
+
+  W1 — invariantes do espelho
+    ✔ I1 — nunca existem dois tokens ativos para a mesma âncora (P3)
+    ✔ I1b — âncoras distintas convivem, e a baixa não libera a âncora (46ms)
+    ✔ I2 — a soma das frações nunca excede o total emitido (P3) (981ms)
+    ✔ I3 — token congelado não transfere valor por nenhum caminho (P1) (42ms)
+    ✔ I4 — só o papel humano de reconciliação descongela (P1) (46ms)
+    ✔ I5 — atualizar hash documental não move valor nem titular (P1)
+    ✔ I6 — msg.value diferente de zero reverte (P7)
+    ✔ I7 — nenhum evento carrega tipo capaz de transportar PII (P2)
+    ✔ I8 — percorrerWaterfall é determinística e sem efeito (P6) (120ms)
+    ✔ I9 — espelho não circula para quem não está habilitado (ADR-0005)
+    ✔ I9b — habilitação vencida não habilita
+
+  W1 — ramos restantes
+    ✔ operação sobre token inexistente falha com causa clara
+    ✔ garantia liberada e garantia de outro nível não entram na absorção (135ms)
+    ✔ absorção parcial não marca o nível como esgotado (90ms)
+    ✔ participante nunca habilitado e participante de habilitação encerrada
+    ✔ todos os papéis classificados quanto a sensibilidade
+    ✔ transferência entre tokens exige titular do destino habilitado (41ms)
+
+  W1 — âncora isolada
+    ✔ recusa baixa de âncora desconhecida e vincula uma única vez
+
+
+  61 passing (8s)
+
+-----------------------------|----------|----------|----------|----------|----------------|
+File                         |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
+-----------------------------|----------|----------|----------|----------|----------------|
+ interfaces/                 |      100 |      100 |      100 |      100 |                |
+  IAncoraRegistro.sol        |      100 |      100 |      100 |      100 |                |
+  ICofreGarantias.sol        |      100 |      100 |      100 |      100 |                |
+  IControleAcesso.sol        |      100 |      100 |      100 |      100 |                |
+  IERC3525.sol               |      100 |      100 |      100 |      100 |                |
+  IEspelhoCPR.sol            |      100 |      100 |      100 |      100 |                |
+  IRegistroParticipantes.sol |      100 |      100 |      100 |      100 |                |
+ src/                        |      100 |       90 |      100 |      100 |                |
+  AncoraRegistro.sol         |      100 |    91.67 |      100 |      100 |                |
+  CofreGarantias.sol         |      100 |     87.5 |      100 |      100 |                |
+  ControleAcesso.sol         |      100 |    92.86 |      100 |      100 |                |
+  EspelhoCPR.sol             |      100 |    90.32 |      100 |      100 |                |
+  RegistroParticipantes.sol  |      100 |     87.5 |      100 |      100 |                |
+-----------------------------|----------|----------|----------|----------|----------------|
+All files                    |      100 |       90 |      100 |      100 |                |
+-----------------------------|----------|----------|----------|----------|----------------|
+
+> Istanbul reports written to ./coverage/ and ./coverage.json
