@@ -32,6 +32,7 @@ npm run demo                      # demonstração completa, 20 passos
 | Quero | Leia |
 |---|---|
 | Entender o projeto | `docs/BRIEFING.md` |
+| **Entender o código, aspecto por aspecto** | **[`docs/codigo/`](docs/codigo/README.md)** — onze documentos, da arquitetura ao glossário |
 | Trabalhar no código | `CLAUDE.md` e o `AGENT.md` do seu diretório |
 | Entender uma decisão | `docs/adr/` |
 | Consumir uma API | `docs/contracts/openapi/README.md` |
