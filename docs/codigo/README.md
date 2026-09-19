@@ -4,6 +4,10 @@ Esta pasta explica **como o sistema é feito**. Para entender *por que* ele
 existe, leia `docs/BRIEFING.md`; para saber *o que está provado e o que não
 está*, leia `docs/ESTADO-DO-PROTOTIPO.md`.
 
+Para a visão geral do sistema — contexto, direcionadores, implantação,
+riscos e evolução — leia antes [`docs/arquitetura/`](../arquitetura/README.md).
+Aqui o foco é o código.
+
 ## Ordem de leitura
 
 | # | Documento | Responde |
